@@ -1,0 +1,32 @@
+catest 1.05
+
+I'm not 100% sure yet but it seems catest 1.04 has a major bug in the algorithm and/or output. For example the old version showed rule '90' as 'not surjective' while it is surjective.
+I'm not sure yet what caused the bug but it seems to be corrected with the new version 1.05.
+I'm sorry for the inconvenience and I suggest to rerun the cases you have mentioned in the paper and some standard cases to be sure.
+For example you mention that rule 270361043509 is not reversible on neighborhoods other than -1,0,1 and 1,0,-1 which is wrong (at least according to the new version). I still have to test it and analyze the graphs more closely, but version 1.04 being the only version doing rule 90 wrong it seems you have to correct the paper at that point.
+
+
+In addition as the last bugfix (stack size of Java) turned out to be rather small I've used the time to bugfix and improved the program (that's how I found the bug mentioned above in the first place) :
+
+- [ALGORITHM] Fixed major bug concerning output / rules introduced in 1.04
+- [ALGORITHM] Included C plugin. Due to overhead when calling an external program use this function only when testing a small number of test cases (<1000). The speed and memory improvement of the C-Plugin is only about 2.
+- [ALGORITHM] Fixed output error with testing all balanced rules (error was introduced in 1.03 or 1.04), the significant rule number displayed in the table was the rule number of the PREVIOUS calculation. (Use for example 'rule number 12', 'neighborhood 0,1' and 'test all balanced rules'. The result shows  '12, 12, 10, 6, 9, 5' instead of '12, 10, 6, 9, 5, 3'.
+- [ALGORITHM] Fixed error that occurs when combining 'New CA rule definition' and 'All neighborhood permutations'
+- [GUI] Set 'Output options' to all as default value
+- [GUI] Added 'Use fast C plugin' option
+- [GUI] Added function to generate graph directly in the program
+- [GUI] Removed unneccesary output ('has graph') in output file
+- [GUI] Added button to directly remove all entries
+- [GUI] Set 'output all' as default
+- [GUI] Removed confirmation screen (I don't see a point in that, it was primarily used for debugging)
+- [GUI] Fixed simple output when not adding to the database
+- [GUI] Disallowed use of automatic testing of 'all neighborhoods' and 'new ca rule definition' at the same time (would otherwise affect 'significant neighborhood size')
+
+I also want to add to my previous statement about the speed:
+The total amount of time needed also depends on the number of connections within the graph and the structure of the graph itself, the number of edges in the product graph depends on the rule and neighborhood.
+
+
+If there is anything else, please feel free to contact me.
+
+Best regards,
+Clemens Lode
