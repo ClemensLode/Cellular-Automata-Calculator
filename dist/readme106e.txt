@@ -1,0 +1,1 @@
+v106e: Adapted for eclipse compilation
