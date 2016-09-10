@@ -411,16 +411,16 @@ public class Main extends java.awt.Frame {
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                         .add(dots1Label)
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(maxSignificantNeighborhoodSizeTextField, 0, 0, Short.MAX_VALUE)
+                        .add(maxSignificantNeighborhoodSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 0, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                         .add(slashLabel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 13, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                         .add(12, 12, 12)
-                        .add(minNeighborhoodSizeTextField, 0, 0, Short.MAX_VALUE)
+                        .add(minNeighborhoodSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 0, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                         .add(dots2Label)
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                         .add(maxNeighborhoodSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 30, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                    .add(neighborhoodField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 242, Short.MAX_VALUE))
+                    .add(neighborhoodField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 242, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap())
         );
 
@@ -528,7 +528,6 @@ public class Main extends java.awt.Frame {
         calculationPanelLayout.setVerticalGroup(
             calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(org.jdesktop.layout.GroupLayout.TRAILING, calculationPanelLayout.createSequentialGroup()
-                .addContainerGap()
                 .add(calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(rulesToTestLabel)
                     .add(rulesToTestField))
@@ -542,13 +541,12 @@ public class Main extends java.awt.Frame {
                     .add(neededMemoryField))
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(progressBarLabel)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .add(progressBar, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
                 .add(calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(startCalculationButton)
                     .add(stopCalculationButton))
-                .addContainerGap())
+                .addContainerGap(19, Short.MAX_VALUE))
         );
 
         ruleConfigurationPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Rule Configuration", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Arial", 1, 11)));
@@ -631,9 +629,9 @@ public class Main extends java.awt.Frame {
                     .add(booleanRepresentationLabel))
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING, false)
+                    .add(ruleField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 507, Short.MAX_VALUE)
                     .add(booleanRuleField)
-                    .add(polynomialRuleField)
-                    .add(ruleField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 507, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
+                    .add(polynomialRuleField)))
         );
         ruleConfigurationPanelLayout.setVerticalGroup(
             ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
@@ -644,12 +642,12 @@ public class Main extends java.awt.Frame {
                     .add(ruleField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(booleanRuleField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(booleanRepresentationLabel))
+                    .add(booleanRepresentationLabel)
+                    .add(booleanRuleField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                 .add(3, 3, 3)
                 .add(ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(polynomialRuleField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(polynomialRuleCheckBox)))
+                    .add(polynomialRuleCheckBox)
+                    .add(polynomialRuleField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
         );
 
         outputOptionsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Database Output options", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Arial", 1, 11)));
@@ -710,7 +708,8 @@ public class Main extends java.awt.Frame {
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(outputBooleanRepresentationCheckBox)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(outputPolynomialRepresentationCheckBox))
+                .add(outputPolynomialRepresentationCheckBox)
+                .addContainerGap(org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         saveEndProgramButton.setFont(new java.awt.Font("Arial", 1, 12));
@@ -723,7 +722,7 @@ public class Main extends java.awt.Frame {
         });
 
         versionLabel.setFont(new java.awt.Font("Arial", 0, 12));
-        versionLabel.setText("Version 1.060a (09/15/2008)");
+        versionLabel.setText("Version 1.060d (12/1/2008)");
 
         contactLabel1.setFont(new java.awt.Font("Arial", 0, 12));
         contactLabel1.setText("clemens@lode.de");
@@ -757,12 +756,12 @@ public class Main extends java.awt.Frame {
                             .add(versionLabel)
                             .add(contactLabel)
                             .add(contactLabel1))
-                        .addContainerGap(15, Short.MAX_VALUE))))
+                        .addContainerGap(22, Short.MAX_VALUE))))
         );
         contactPanelLayout.setVerticalGroup(
             contactPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(org.jdesktop.layout.GroupLayout.TRAILING, contactPanelLayout.createSequentialGroup()
-                .addContainerGap(50, Short.MAX_VALUE)
+                .addContainerGap(44, Short.MAX_VALUE)
                 .add(versionLabel)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(contactLabel)
@@ -827,12 +826,18 @@ public class Main extends java.awt.Frame {
         zoomLabel.setFont(new java.awt.Font("Arial", 0, 12));
         zoomLabel.setText("Zoom");
 
-        zoomSlider.setMaximum(20);
+        zoomSlider.setMaximum(16);
         zoomSlider.setMinimum(1);
+        zoomSlider.setMinorTickSpacing(1);
         zoomSlider.setPaintLabels(true);
         zoomSlider.setPaintTicks(true);
         zoomSlider.setSnapToTicks(true);
         zoomSlider.setValue(2);
+        zoomSlider.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                zoomSliderStateChanged(evt);
+            }
+        });
         zoomSlider.addInputMethodListener(new java.awt.event.InputMethodListener() {
             public void caretPositionChanged(java.awt.event.InputMethodEvent evt) {
                 zoomSliderCaretPositionChanged(evt);
@@ -900,7 +905,7 @@ public class Main extends java.awt.Frame {
         simulatorStartConfigurationPanelLayout.setVerticalGroup(
             simulatorStartConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(org.jdesktop.layout.GroupLayout.TRAILING, simulatorStartConfigurationPanelLayout.createSequentialGroup()
-                .addContainerGap(21, Short.MAX_VALUE)
+                .addContainerGap(16, Short.MAX_VALUE)
                 .add(simulatorStartConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(simulatorConfigurationSizeLabel)
                     .add(simulatorConfigurationSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
@@ -952,7 +957,7 @@ public class Main extends java.awt.Frame {
                 .add(automaticTestsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
                     .add(testAllNeighborhoodVariationsCheckBox)
                     .add(testAllNeighborhoodPermutationsCheckBox))
-                .addContainerGap(8, Short.MAX_VALUE))
+                .addContainerGap(org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         automaticTestsPanelLayout.setVerticalGroup(
             automaticTestsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
@@ -980,6 +985,8 @@ public class Main extends java.awt.Frame {
         checkDatabaseDuplicatesCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
         checkDatabaseDuplicatesCheckBox.setLabel("Skip already calculated");
         checkDatabaseDuplicatesCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        checkDatabaseDuplicatesCheckBox.setMaximumSize(new java.awt.Dimension(145, 15));
+        checkDatabaseDuplicatesCheckBox.setMinimumSize(new java.awt.Dimension(145, 15));
 
         addToDatabaseCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
         addToDatabaseCheckBox.setSelected(true);
@@ -1016,11 +1023,11 @@ public class Main extends java.awt.Frame {
             miscOptionsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(miscOptionsPanelLayout.createSequentialGroup()
                 .add(miscOptionsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(checkDatabaseDuplicatesCheckBox)
                     .add(useFastCPPPluginCheckBox)
                     .add(generateGraphCheckBox)
                     .add(addToDatabaseCheckBox)
-                    .add(simulatorOutputCheckBox))
+                    .add(simulatorOutputCheckBox)
+                    .add(checkDatabaseDuplicatesCheckBox, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(28, Short.MAX_VALUE))
         );
         miscOptionsPanelLayout.setVerticalGroup(
@@ -1032,10 +1039,10 @@ public class Main extends java.awt.Frame {
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(simulatorOutputCheckBox, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 15, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(checkDatabaseDuplicatesCheckBox)
+                .add(checkDatabaseDuplicatesCheckBox, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(useFastCPPPluginCheckBox)
-                .addContainerGap(53, Short.MAX_VALUE))
+                .addContainerGap(47, Short.MAX_VALUE))
         );
 
         org.jdesktop.layout.GroupLayout testPanelLayout = new org.jdesktop.layout.GroupLayout(testPanel);
@@ -1046,47 +1053,43 @@ public class Main extends java.awt.Frame {
                 .addContainerGap()
                 .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
                     .add(testPanelLayout.createSequentialGroup()
-                        .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
-                            .add(org.jdesktop.layout.GroupLayout.TRAILING, testPanelLayout.createSequentialGroup()
-                                .add(4, 4, 4)
-                                .add(calculationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
+                            .add(org.jdesktop.layout.GroupLayout.LEADING, testPanelLayout.createSequentialGroup()
+                                .add(calculationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                                 .add(contactPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                            .add(simulatorStartConfigurationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                            .add(org.jdesktop.layout.GroupLayout.LEADING, simulatorStartConfigurationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                        .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
                             .add(miscOptionsPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .add(outputOptionsPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
+                            .add(outputOptionsPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                     .add(testPanelLayout.createSequentialGroup()
                         .add(neighborhoodConfigurationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                         .add(automaticTestsPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .add(ruleConfigurationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap(19, Short.MAX_VALUE))
+                .addContainerGap(29, Short.MAX_VALUE))
         );
         testPanelLayout.setVerticalGroup(
             testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(testPanelLayout.createSequentialGroup()
                 .addContainerGap()
                 .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
-                    .add(automaticTestsPanel, 0, 75, Short.MAX_VALUE)
-                    .add(neighborhoodConfigurationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                    .add(neighborhoodConfigurationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(automaticTestsPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 73, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(ruleConfigurationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(testPanelLayout.createSequentialGroup()
-                        .add(outputOptionsPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED))
-                    .add(simulatorStartConfigurationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .add(outputOptionsPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 129, Short.MAX_VALUE)
+                    .add(simulatorStartConfigurationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(contactPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .add(testPanelLayout.createSequentialGroup()
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                            .add(calculationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 181, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                            .add(miscOptionsPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
-                .add(28, 28, 28))
+                    .add(miscOptionsPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
+                        .add(calculationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .add(contactPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                .add(34, 34, 34))
         );
 
         catestPane.addTab("Parameters & Test", testPanel);
@@ -1169,7 +1172,7 @@ public class Main extends java.awt.Frame {
                 .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
                     .add(org.jdesktop.layout.GroupLayout.LEADING, resultsPanelLayout.createSequentialGroup()
                         .addContainerGap()
-                        .add(resultsScrollPane, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 830, Short.MAX_VALUE))
+                        .add(resultsScrollPane, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 840, Short.MAX_VALUE))
                     .add(resultsPanelLayout.createSequentialGroup()
                         .add(37, 37, 37)
                         .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
@@ -1183,7 +1186,7 @@ public class Main extends java.awt.Frame {
                         .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
                             .add(generateSimulationButton)
                             .add(showSimulationButton))
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 227, Short.MAX_VALUE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 237, Short.MAX_VALUE)
                         .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
                             .add(org.jdesktop.layout.GroupLayout.TRAILING, loadResultsButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 113, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                             .add(org.jdesktop.layout.GroupLayout.TRAILING, saveResultsButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 113, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))))
@@ -1225,11 +1228,11 @@ public class Main extends java.awt.Frame {
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(catestPane, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 855, Short.MAX_VALUE)
+            .add(catestPane, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 865, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(catestPane, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 550, Short.MAX_VALUE)
+            .add(catestPane, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 547, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
         );
 
         pack();
@@ -1648,10 +1651,10 @@ public class Main extends java.awt.Frame {
             simulatorFrame.add("Center", new JScrollPane(simulatorIRC));
         } else {
             simulatorIRC.setImage(simulationImage);
-            simulatorIRC.validate();
+            simulatorIRC.revalidate();
             simulatorIRC.repaint();
-            simulatorFrame.validate();
-            simulatorFrame.repaint();
+//            simulatorFrame.repaint();
+  //          simulatorFrame.validate();
         }
         simulatorFrame.setSize(531, 551);//calculation_width * zoom_slider_steps, calculation_steps * zoom_slider_steps);
         simulatorFrame.setVisible(true);
@@ -2120,18 +2123,6 @@ public class Main extends java.awt.Frame {
      * Deactivate graph and simulator output when CPP plugin is selected
      * @param evt unused
      */
-    private void useFastCPPPluginCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_useFastCPPPluginCheckBoxItemStateChanged
-        if (useFastCPPPluginCheckBox.isSelected()) {
-            generateGraphCheckBox.setSelected(false);
-            generateGraphCheckBox.setEnabled(false);
-            simulatorOutputCheckBox.setSelected(false);
-            simulatorOutputCheckBox.setEnabled(false);
-        } else {
-            generateGraphCheckBox.setEnabled(true);
-            simulatorOutputCheckBox.setEnabled(true);
-        }
-    }//GEN-LAST:event_useFastCPPPluginCheckBoxItemStateChanged
-
     /**
      * Exit program
      * @param evt unused
@@ -2447,6 +2438,12 @@ public class Main extends java.awt.Frame {
         } else {
             minSignificantNeighborhoodSizeTextField.setEnabled(false);
             maxSignificantNeighborhoodSizeTextField.setEnabled(false);
+            try {
+                ALGORITHM.Neighborhood.setMaxSignificantNeighborhoodSize(ALGORITHM.Neighborhood.getMinSignificantNeighborhoodSize());
+            } catch (Exception e) {
+            }
+        
+            maxSignificantNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMaxSignificantNeighborhoodSize());
             ruleField.setText(ALGORITHM.Function.getSignificantWolframRuleNumber().toString());
             ruleField.setEnabled(true);
             if (polynomialRuleCheckBox.isSelected()) {
@@ -2686,6 +2683,22 @@ public class Main extends java.awt.Frame {
             }
         }
     }//GEN-LAST:event_loadSimulatorConfigurationButtonMouseClicked
+
+    private void zoomSliderStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_zoomSliderStateChanged
+        update_simulator_output();
+    }//GEN-LAST:event_zoomSliderStateChanged
+
+    private void useFastCPPPluginCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_useFastCPPPluginCheckBoxItemStateChanged
+        if (useFastCPPPluginCheckBox.isSelected()) {
+            generateGraphCheckBox.setSelected(false);
+            generateGraphCheckBox.setEnabled(false);
+            simulatorOutputCheckBox.setSelected(false);
+            simulatorOutputCheckBox.setEnabled(false);
+        } else {
+            generateGraphCheckBox.setEnabled(true);
+            simulatorOutputCheckBox.setEnabled(true);
+        }
+    }//GEN-LAST:event_useFastCPPPluginCheckBoxItemStateChanged
 
     /**
      * The boolean rule field has changed, parse and check its contents and update the corresponding rule fields 

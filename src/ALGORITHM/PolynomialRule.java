@@ -130,8 +130,8 @@ public class PolynomialRule {
                 temp.add(new Summand(s.factor, s.power));
 
                 if (cell_states == 4) {
-                    // multiplicate the rest with q == -1 (and later with (x_i - x_values[i])^q)
-                    s.factor = multiplicate_p4(s.factor, q);
+                    // multiplicate the rest with -1 (and later with (x_i - x_values[i])^q)
+                    // no action needs to be taken with cell_states == 4, -a = a
                 } else {
                     // multiplicate the rest with -1 (and later with (x_i - x_values[i])^q)                    
                     s.factor *= -1;
@@ -146,7 +146,7 @@ public class PolynomialRule {
                         // multiplicate with 'x_values[i]'                        
                         int value = multiplicate_p4(s.factor, x_values[i]);
                         // multiplicate with '-1 == q'
-                        value = multiplicate_p4(value, q);
+                        //value = multiplicate_p4(value, q);
 
                         temp2.add(new Summand(value, s.power));
                         s.power[i]++;
@@ -258,7 +258,7 @@ public class PolynomialRule {
                 y++;
             }
 
-            s.factor = s.factor % cell_states;
+            s.factor = s.factor % cell_states; // TODO?
 
             if (s.factor == 0) {
                 s.to_delete = true;
@@ -291,11 +291,15 @@ public class PolynomialRule {
 
         for (Summand s : summand_list) {
             while (s.factor < 0) {
-                s.factor += cell_states;
+                if(cell_states == 4) {
+                    s.factor = -s.factor;
+                } else {
+                    s.factor += cell_states;
+                }
             }
         }
     }
-
+//ein fehler noch irgendwo....
     /**
      * Generates a polynomial rule representation out of the function array
      * @param function Function that we want to transform into a polynomial rule string
@@ -394,7 +398,6 @@ public class PolynomialRule {
      * @throws java.lang.Exception If there was a parse error, i.e. an invalid polynomial rule
      */
     public static BigInteger extractPolynomialRuleNumber(String polynomial_rule, final int significant_max_array_size, final int cell_states) throws Exception {
-
         BigInteger rule_nr = BigInteger.ZERO;
 
         int resulting_function[] = new int[significant_max_array_size];
@@ -463,7 +466,11 @@ public class PolynomialRule {
 
                 if (index_next_x == -1) {
                     // last element
-                    factor *= Integer.valueOf(value_string);
+                    if(cell_states == 4) {
+                        factor = multiplicate_p4(factor, Integer.valueOf(value_string));
+                    } else {
+                        factor *= Integer.valueOf(value_string);
+                    }
                     continue;
                 }
 
@@ -472,7 +479,11 @@ public class PolynomialRule {
                 if (index_next_x == -1) {// && value_string.compareTo(bs) != 0) {
                     continue;
                 } else if (index_next_x > 0) {
-                    factor *= Integer.valueOf(value_string);
+                    if(cell_states == 4) {
+                        factor = multiplicate_p4(factor, Integer.valueOf(value_string));
+                    } else {
+                        factor *= Integer.valueOf(value_string);
+                    }
                     bs = bs.substring(index_next_x);
                 }
 
@@ -532,7 +543,6 @@ public class PolynomialRule {
             }
         }
 
-
         int neighborhood_size = largest_x + 1;
 
         if (neighborhood_size > Neighborhood.getNeighborhoodSize()) {
@@ -559,9 +569,15 @@ public class PolynomialRule {
                 x_values[significant_neighborhood_size - 1 - k] = j % cell_states;
                 j /= cell_states;
             }
-            resulting_function[i] = calculate_polynomial_function(x_values, p_list);
-            while (resulting_function[i] < 0) {
-                resulting_function[i] += cell_states;
+            resulting_function[i] = calculate_polynomial_function(x_values, p_list, cell_states);
+            if(cell_states == 4) {
+                if(resulting_function[i] < 0) {
+                    resulting_function[i] = -resulting_function[i];
+                }
+            } else {
+                while (resulting_function[i] < 0) {
+                    resulting_function[i] += cell_states;
+                }
             }
             resulting_function[i] = resulting_function[i] % cell_states;
         }
@@ -580,23 +596,35 @@ public class PolynomialRule {
      * @param p_list list of list of polynomial objects
      * @return function value corresponding to the polynomial rule
      */
-    private static int calculate_polynomial_function(int[] x_values, ArrayList<ArrayList<PolynomialObject>> p_list) {
+    private static int calculate_polynomial_function(int[] x_values, ArrayList<ArrayList<PolynomialObject> > p_list, int cell_states) {
         long result_factor = 0;
 
         for (ArrayList<PolynomialObject> i : p_list) {
-            long current_factor = 1;
+            int current_factor = 1;
 
             for (PolynomialObject j : i) {
-                if (j.is_constant) {
-                    current_factor *= j.index;
-
-                } else {
-                    current_factor *= x_values[j.index];
+                if(cell_states == 4) {
+                    if (j.is_constant) {
+                        current_factor = multiplicate_p4(current_factor, j.index);
+                    } else {
+                        current_factor = multiplicate_p4(current_factor, x_values[j.index]);
+                    }                    
+                }
+                else {
+                    if (j.is_constant) {
+                        current_factor *= j.index;
+                    } else {
+                        current_factor *= x_values[j.index];
+                    }
                 }
 
 
             }
-            result_factor += current_factor;
+            if(cell_states == 4) {
+                result_factor = add_p4((int)result_factor, current_factor);
+            } else {
+                result_factor += current_factor;
+            }
         }
 
         return (int) result_factor;

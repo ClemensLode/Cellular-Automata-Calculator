@@ -14,7 +14,7 @@ public class CellStates {
     /**
      * Maximal number of cell states
      */
-    private final static int MAX_NUMBER_OF_CELL_STATES = 5;
+    private final static int MAX_NUMBER_OF_CELL_STATES = 7;
 
     /**
      * current number of cell states
