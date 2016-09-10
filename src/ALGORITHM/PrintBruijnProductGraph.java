@@ -1,8 +1,16 @@
 package ALGORITHM;
 
-import java.util.*;
-import java.io.*;
-import java.text.*;
+/**
+ *
+ * @author Clemens Lode, 1151459, University Karlsruhe (TH), clemens@lode.de
+ */
+
+import java.util.List;
+import java.util.LinkedList;
+import java.util.Iterator;
+
+import java.io.FileOutputStream;
+import java.io.PrintStream;
 
 /**
  * An instance of BruijnProductGraph contains the information for one node, i.e. its id, its connections to other nodes and its representative value that encodes its position in the Bruijn product graph.
@@ -23,10 +31,21 @@ public class PrintBruijnProductGraph extends BruijnProductGraph {
     public PrintBruijnProductGraph(int my_ax_y, int my_ax_x) {
         super(my_ax_y, my_ax_x);
     }
+    
+    /**
+     * Node instance generator (implements BruijnProductGraph.createNewNode)
+     * @param my_ax_y First of two values that encode the position in the Bruijn product graph. (y coordinate)
+     * @param my_ax_x Second of two values that encode the position in the Bruijn product graph. (x coordinate)
+     * @return new node
+     */
     protected PrintBruijnProductGraph createNewNode(int my_ax_y, int my_ax_x) {
         return new PrintBruijnProductGraph(my_ax_y, my_ax_x);    
     }
 
+    /**
+     * Core function to test for injectivity / surjectivity
+     * @return always true, we can't cancel early because for the graph we want to visit all nodes
+     */
     protected boolean testNodeStronglyConnected() {
         if (low_id == id) {
             // trivial case, last node?
@@ -94,20 +113,31 @@ public class PrintBruijnProductGraph extends BruijnProductGraph {
         return true;
     }
 
+    /**
+     * Checks if corresponding graph entry is null and creates a new node if that's the case
+     * @param index index to test
+     * @param x x coordinate
+     * @param y y coordinate
+     */
     protected void check_for_null(int index, int x, int y) {
         if (graph[index] == null) {
             graph[index] = new PrintBruijnProductGraph(x, y);
         }
     }
 
+    /**
+     * Traverses through the whole Bruijn product graph to test if it's surjective and/or injective
+     * @throws Exception when an internal error occured.
+     */
     public static void runConnectionTest() throws Exception {
 //	Searching strongly connected components...	
         int k = 0;
         int l = 1;
-
+        final int last_element_index = Function.getLastElementIndex(); 
+        
 // first check diagonale
-        for (int i = 0; i < Function.getLastElementIndex(); i++) {
-            int index = i * Function.getLastElementIndex() + i;
+        for (int i = 0; i < last_element_index; i++) {
+            int index = i * last_element_index + i;
             if (graph[index] == null) {
                 graph[index] = new PrintBruijnProductGraph(i, i);
             }
@@ -119,7 +149,7 @@ public class PrintBruijnProductGraph extends BruijnProductGraph {
             }
         }
 
-        for (int i = 1; i < Function.getLastElementIndex() * Function.getLastElementIndex(); i++) {
+        for (int i = 1; i < last_element_index * last_element_index; i++) {
             if (graph[i] == null) {
                 graph[i] = new PrintBruijnProductGraph(k, l);
             }
@@ -129,7 +159,7 @@ public class PrintBruijnProductGraph extends BruijnProductGraph {
                 }
             }
             l++;
-            if (l >= Function.getLastElementIndex()) {
+            if (l >= last_element_index) {
                 l = 0;
                 k++;
             }
@@ -148,6 +178,7 @@ public class PrintBruijnProductGraph extends BruijnProductGraph {
     /**
      * Writes the current Bruijn product graph into a file using the viz file format
      * @param file_name Base file name of the .viz file
+     * @throws Exception I/O Error writing file
      */
     public static void printToFile(String file_name) throws Exception {
         FileOutputStream f;
@@ -158,6 +189,10 @@ public class PrintBruijnProductGraph extends BruijnProductGraph {
         } catch (Exception e) {
             throw new Exception("printToFile(): Error opening file [" + e + "]");
         }
+        
+        final int cell_states = CellStates.getNumberOfCellStates();
+        final int last_element_index = Function.getLastElementIndex();        
+        
         try {
             p.println("digraph finite_state_machine {");
             p.println("rankdir=LR;");
@@ -177,12 +212,12 @@ public class PrintBruijnProductGraph extends BruijnProductGraph {
                 "magenta"
             };
 
-            boolean found = false;
+//            boolean found = false;
 
             int color = 0;
-            if (stronglyConnectedComponents > 0) {
-                found = true;
-            }
+//            if (stronglyConnectedComponents > 0) {
+//                found = true;
+//            } TODO?
 
             Iterator it = stronglyConnectedComponentsList.iterator();
             while (it.hasNext()) {
@@ -197,13 +232,13 @@ public class PrintBruijnProductGraph extends BruijnProductGraph {
                 while (j.hasNext()) {
                     PrintBruijnProductGraph k = (PrintBruijnProductGraph) j.next();
 
-                    if (Function.getLastElementIndex() < 26) {
+                    if (last_element_index < 26) {
                         p.print(" " + (char) ('A' + k.ax_y));
                     } else {
                         p.print(" " + k.ax_y + "00");
                     }
 
-                    if (Function.getLastElementIndex() < 26) {
+                    if (last_element_index < 26) {
                         p.print("" + (char) ('A' + k.ax_x));
                     } else {
                         p.print("" + k.ax_x);
@@ -214,48 +249,49 @@ public class PrintBruijnProductGraph extends BruijnProductGraph {
 
             // other nodes that are not strongly connected
             p.println("node [shape = circle, color = gray];");
+            
 
-            for (int i = 0; i < Function.getLastElementIndex(); i++) {
-                for (int j = 0; j < Function.getLastElementIndex(); j++) //			if(graph[i*Function.getLastElementIndex() + j] != null) // TODO?
+            for (int i = 0; i < last_element_index; i++) {
+                for (int j = 0; j < last_element_index; j++) 
                 {
 
-                    int axb_i[] = new int[Function.getNumberOfCellStates()];
-                    int axb_j[] = new int[Function.getNumberOfCellStates()];
-                    int xb_i[] = new int[Function.getNumberOfCellStates()];
-                    int xb_j[] = new int[Function.getNumberOfCellStates()];
+                    int axb_i[] = new int[cell_states];
+                    int axb_j[] = new int[cell_states];
+                    int xb_i[] = new int[cell_states];
+                    int xb_j[] = new int[cell_states];
 
-                    for (int b = 0; b < Function.getNumberOfCellStates(); b++) {
-                        axb_i[b] = graph[i * Function.getLastElementIndex() + j].ax_y * Function.getNumberOfCellStates() + b;
-                        axb_j[b] = graph[i * Function.getLastElementIndex() + j].ax_x * Function.getNumberOfCellStates() + b;
-                        xb_i[b] = axb_i[b] % Function.getLastElementIndex();
-                        xb_j[b] = axb_j[b] % Function.getLastElementIndex();
+                    for (int b = 0; b < cell_states; b++) {
+                        axb_i[b] = graph[i * last_element_index + j].ax_y * cell_states + b;
+                        axb_j[b] = graph[i * last_element_index + j].ax_x * cell_states + b;
+                        xb_i[b] = axb_i[b] % last_element_index;
+                        xb_j[b] = axb_j[b] % last_element_index;
                     }
                     // TODO possible here much of the stack [local variables] can be saved.
-                    for (int bi = 0; bi < Function.getNumberOfCellStates(); bi++) {
-                        for (int bj = 0; bj < Function.getNumberOfCellStates(); bj++) {
+                    for (int bi = 0; bi < CellStates.getNumberOfCellStates(); bi++) {
+                        for (int bj = 0; bj < CellStates.getNumberOfCellStates(); bj++) {
                             if (Function.getFunction(axb_i[bi]) ==
                                     Function.getFunction(axb_j[bj])) {
-                                int index = xb_i[bi] * Function.getLastElementIndex() + xb_j[bj];
-                                if (Function.getLastElementIndex() < 26) {
+                                int index = xb_i[bi] * last_element_index + xb_j[bj];
+                                if (last_element_index < 26) {
                                     p.print("" + (char) ('A' + i));
                                 } else {
                                     p.print("" + i + "00");
                                 }
 
-                                if (Function.getLastElementIndex() < 26) {
+                                if (last_element_index < 26) {
                                     p.print("" + (char) ('A' + j));
                                 } else {
                                     p.print("" + j);
                                 }
                                 p.print(" -> ");
 
-                                if (Function.getLastElementIndex() < 26) {
+                                if (last_element_index < 26) {
                                     p.print("" + (char) ('A' + graph[index].ax_y));
                                 } else {
                                     p.print("" + graph[index].ax_y + "00");
                                 }
 
-                                if (Function.getLastElementIndex() < 26) {
+                                if (last_element_index < 26) {
                                     p.print("" + (char) ('A' + graph[index].ax_x));
                                 } else {
                                     p.print("" + (graph[index].ax_x));
@@ -269,7 +305,6 @@ public class PrintBruijnProductGraph extends BruijnProductGraph {
             }
             p.println("}");
             p.close();
-//		system("dot -Tpng -O " + file_name); TODO
         } catch (Exception e) {
             throw new Exception("printToFile(): Error writing to file " + file_name + " [" + e + "]");
         }

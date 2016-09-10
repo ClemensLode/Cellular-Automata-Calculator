@@ -1,35 +1,42 @@
-/*
- * ImageRenderComponent.java
- *
- * Created on February 17, 2007, 10:28 AM
- *
- * To change this template, choose Tools | Template Manager
- * and open the template in the editor.
- */
-
 package GUI;
 
-import java.awt.*;
-import javax.swing.*;
+/**
+ *
+ * @author Clemens Lode, 1151459, University Karlsruhe (TH), clemens@lode.de
+ */
+
+import java.awt.Dimension;
+import java.awt.Graphics;
+import javax.swing.JPanel;
 import java.awt.image.BufferedImage;
 
-// TODO: scrollable?
+
 class ImageRenderComponent extends JPanel {
     BufferedImage image;
     Dimension size;
- 
+    
+    public ImageRenderComponent() {
+    } 
+
     public ImageRenderComponent(BufferedImage image) {
         this.image = image;
         size = new Dimension(image.getWidth(), image.getHeight());
     }
+    
+    public void setImage(BufferedImage image) {
+        this.image = image;
+        size = new Dimension(image.getWidth(), image.getHeight());
+    }
+    
+    @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        int x = 0;//(getWidth() - size.width)/2;
-        int y = 0;//(getHeight() - size.height)/2;
-        ((Graphics2D)g).setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        //((Graphics2D)g).setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
         g.drawImage(image, 0, 0, getWidth(), getHeight(), this);
     }
-// TODO update beim Groessenveraendern 
+// TODO update when size has changed?
+
+    @Override
     public Dimension getPreferredSize() {
         return size;
     }

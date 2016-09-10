@@ -1,10 +1,12 @@
-// TODO first: check the diagonale (and only the diagonal)
-
 package ALGORITHM;
 
-import java.util.*;
-import java.io.*;
-import java.text.*;
+/**
+ *
+ * @author Clemens Lode, 1151459, University Karlsruhe (TH), clemens@lode.de
+ */
+
+import java.util.Stack;
+import java.util.Arrays;
 
 /**
  * An instance of BruijnProductGraph contains the information for one node, i.e. its id, its connections to other nodes and its representative value that encodes its position in the Bruijn product graph.
@@ -105,29 +107,32 @@ abstract public class BruijnProductGraph
     {
         initNode();
         stack.push(this);
+        
+        final int last_element_index = Function.getLastElementIndex();
+        final int cell_states = CellStates.getNumberOfCellStates();
 
 /* 'axb' will contain the neighborhood configuration that 'connects' two nodes that 
  correspond to the first n-1 positions (ax) and respectivly the last n-1 positions (xb) */
-        int axb_i[] = new int[Function.getNumberOfCellStates()];
-        int axb_j[] = new int[Function.getNumberOfCellStates()];
-        int xb_i[] = new int[Function.getNumberOfCellStates()];
-        int xb_j[] = new int[Function.getNumberOfCellStates()];
+        int axb_i[] = new int[cell_states];
+        int axb_j[] = new int[cell_states];
+        int xb_i[] = new int[cell_states];
+        int xb_j[] = new int[cell_states];
         
-        for(int b = 0; b < Function.getNumberOfCellStates(); b++) 
+        for(int b = 0; b < cell_states; b++) 
         {
-            axb_i[b] = ax_y * Function.getNumberOfCellStates() + b;
-            axb_j[b] = ax_x * Function.getNumberOfCellStates() + b;
-            xb_i[b] = axb_i[b] % Function.getLastElementIndex();
-            xb_j[b] = axb_j[b] % Function.getLastElementIndex();
+            axb_i[b] = ax_y * cell_states + b;
+            axb_j[b] = ax_x * cell_states + b;
+            xb_i[b] = axb_i[b] % last_element_index;
+            xb_j[b] = axb_j[b] % last_element_index;
         }
  
 // Test the (numberOfCellStates)^2 possible connections if the nodes correspond in 'axb'
-        for(int bi = 0; bi < Function.getNumberOfCellStates(); bi++)
-            for(int bj = 0; bj < Function.getNumberOfCellStates(); bj++)
+        for(int bi = 0; bi < cell_states; bi++) {
+            for(int bj = 0; bj < cell_states; bj++) {
                 if(Function.getFunction(axb_i[bi]) ==
                 Function.getFunction(axb_j[bj])) {
             // calculate the index of the connected node
-            int index = xb_i[bi] * Function.getLastElementIndex() + xb_j[bj];
+            int index = xb_i[bi] * last_element_index + xb_j[bj];
             
             if(graph[index] == null) {
                 graph[index] = createNewNode(xb_i[bi], xb_j[bj]);
@@ -135,15 +140,20 @@ abstract public class BruijnProductGraph
             
             // visit the connected node
             if(graph[index].id == -1) {
-                if(!graph[index].visit())
+                if(!graph[index].visit()) {
                     return false;
+                }
                 // update the root node id
                 low_id = low_id < graph[index].low_id ? low_id : graph[index].low_id;
-            } else
+            } else {
                 // node was already visited and still marked? (i.e. not a part of a different strongly connected component)
-                if(graph[index].inStack)
+                if(graph[index].inStack) {
                     low_id = low_id < graph[index].id ? low_id : graph[index].id;
                 }
+            }
+                }
+            }
+        }
         
         return testNodeStronglyConnected();
     }
@@ -157,11 +167,11 @@ abstract public class BruijnProductGraph
 	low_id = id;
 	BruijnProductGraph.globalId++;
 	inStack = true;
-        if(Function.singleCalculation)
+        if(Iteration.singleCalculation)
         {
             if(BruijnProductGraph.globalId >= BruijnProductGraph.max_stack)
             {
-                Function.callback.updateBar(BruijnProductGraph.max_stack);
+                Iteration.callback.updateBar(BruijnProductGraph.max_stack);
                 BruijnProductGraph.max_stack *= 2;
             }
         }
@@ -202,15 +212,20 @@ abstract public class BruijnProductGraph
      */
     public static boolean isInjective()
     {
-        if(is_surjective <= 0)
+        if(is_surjective <= 0) {
             return false;
+        }
 
-        if(is_injective != -1)
+        if(is_injective != -1) {
             return (is_injective == 1);
+        }
 
-        if(stronglyConnectedComponents == 1)
+        if(stronglyConnectedComponents == 1) {
             return true;
-        else return false;
+        }
+        else {
+            return false;
+        }
     }    
 
     /**
@@ -219,8 +234,9 @@ abstract public class BruijnProductGraph
      */
     public static boolean isSurjective()
     {
-        if(is_surjective != -1)
+        if(is_surjective != -1) {
             return (is_surjective == 1);
+        }
         return false;
     }   
 }

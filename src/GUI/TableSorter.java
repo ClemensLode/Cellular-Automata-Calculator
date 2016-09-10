@@ -1,13 +1,25 @@
 package GUI;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.util.*;
-import java.util.List;
+/**
+ *
+ * @author Clemens Lode, 1151459, University Karlsruhe (TH), clemens@lode.de
+ */
 
-import javax.swing.*;
+import java.awt.Component;
+import java.awt.Color;
+import java.awt.Graphics;
+
+import java.awt.event.*;
+
+import java.util.*;
+
+import javax.swing.JTable;
+import javax.swing.Icon;
+import javax.swing.JLabel;
+
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
+
 import javax.swing.table.*;
 
 /**
@@ -260,14 +272,17 @@ public class TableSorter extends AbstractTableModel {
         return (tableModel == null) ? 0 : tableModel.getColumnCount();
     }
 
+    @Override
     public String getColumnName(int column) {
         return tableModel.getColumnName(column);
     }
 
+    @Override
     public Class getColumnClass(int column) {
         return tableModel.getColumnClass(column);
     }
 
+    @Override
     public boolean isCellEditable(int row, int column) {
         return tableModel.isCellEditable(modelIndex(row), column);
     }
@@ -276,6 +291,7 @@ public class TableSorter extends AbstractTableModel {
         return tableModel.getValueAt(modelIndex(row), column);
     }
 
+    @Override
     public void setValueAt(Object aValue, int row, int column) {
         tableModel.setValueAt(aValue, modelIndex(row), column);
     }
@@ -374,6 +390,7 @@ public class TableSorter extends AbstractTableModel {
     }
 
     private class MouseHandler extends MouseAdapter {
+        @Override
         public void mouseClicked(MouseEvent e) {
             JTableHeader h = (JTableHeader) e.getSource();
             TableColumnModel columnModel = h.getColumnModel();

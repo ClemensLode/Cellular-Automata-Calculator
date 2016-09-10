@@ -1,35 +1,54 @@
 package GUI;
-/*
- * Main.java
- *
- * Created on January 30, 2007, 5:33 AM
- */
 
-import java.awt.*;
-import java.awt.event.*;
+/**
+ * Version 1.06b
+ * @author Clemens Lode, 1151459, University Karlsruhe (TH), clemens@lode.de
+ */
 import javax.swing.*;
-import javax.swing.table.*;
 import java.util.*;
 import java.io.*;
-import javax.imageio.*;
+import javax.imageio.ImageIO;
+
 import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+
 import java.math.BigInteger;
 
 public class Main extends java.awt.Frame {
 
-    boolean neighborhoodSizeWasActivated = false;
-    boolean significantNeighborhoodSizeWasActivated = false;
-    boolean neighborhoodWasActivated = false;
-    boolean ruleNumberWasActivated = false;
-
-
+    /**
+     * worker thread for calculation
+     */
     CalculationThread calculation_thread;
+    
+    /**
+     * result database
+     */
     ResultsTable results = new ResultsTable();
     TableSorter sorter = new TableSorter(results);
+    
+    /**
+     * Objects for the simulator output
+     */
+    static BufferedImage simulationImage;
+    static JFrame simulatorFrame = null;
+    static ImageRenderComponent simulatorIRC = null;
 
+    /**
+     * temporary variables to save whether certain fields were activated
+     */
+    boolean minNeighborhoodSizeWasActivated = false;
+    boolean minSignificantNeighborhoodSizeWasActivated = false;
+    boolean maxNeighborhoodSizeWasActivated = false;
+    boolean maxSignificantNeighborhoodSizeWasActivated = false;
+    boolean neighborhoodWasActivated = false;
+    boolean ruleNumberWasActivated = false;
+    
+    
     /** Creates new form Main */
     public Main() {
         initComponents();
+        ALGORITHM.PolynomialRule.init_p4();
 
         try {
             ALGORITHM.Function.createStandardSignificantFunction();
@@ -38,17 +57,16 @@ public class Main extends java.awt.Frame {
         // TODO
         }
 
-        significantNeighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getSignificantNeighborhoodSize());
-        significantNeighborhoodSizeField.setEnabled(false);
+        minSignificantNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMinSignificantNeighborhoodSize());
+        maxSignificantNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMaxSignificantNeighborhoodSize());
+        minNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMinNeighborhoodSize());
+        maxNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMaxNeighborhoodSize());
 
-        neighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getNeighborhoodSize());
-        neighborhoodSizeField.setEnabled(false);
+        neighborhoodField.setText(ALGORITHM.Neighborhood.getSignificantNeighborhoodString());
 
-        neighborhoodField.setText("" + ALGORITHM.Neighborhood.getNeighborhoodString());
+        numberOfCellStatesField.setText("" + ALGORITHM.CellStates.getNumberOfCellStates());
 
-        numberOfCellStatesField.setText("" + ALGORITHM.Function.getNumberOfCellStates());
-
-        updateNeededFields();
+        updateNeededRessourcesFields();
         results.fireTableStructureChanged();
 
         resultTable.setModel(sorter);
@@ -56,72 +74,85 @@ public class Main extends java.awt.Frame {
         resultTable.getTableHeader().setToolTipText(
                 "Click to specify sorting; Control-Click to specify secondary sorting");
 
-        File my_file = new File("temp_results.txt");
+        loadSettings("temp_results.txt");
+
+        updateRuleFields();
+
+    }
+
+    /**
+     * Load GUI settings from a file
+     * @param file_name name of file
+     */
+    private void loadSettings(String file_name) {
+        // load old settings if file exists
+        File my_file = new File(file_name);
         if (my_file.exists()) {
 
             try {
                 BufferedReader p = new BufferedReader(new FileReader(my_file.getAbsoluteFile()));
 
-                boolean test_single_neighborhood = Boolean.valueOf(p.readLine());
-                boolean test_all_neighborhood_variations = Boolean.valueOf(p.readLine());
-                boolean test_all_neighborhood_sizes = Boolean.valueOf(p.readLine());
-                boolean test_all_neighborhoods = Boolean.valueOf(p.readLine());
+                testAllNeighborhoodVariationsCheckBox.setSelected(Boolean.valueOf(p.readLine()));
+                testAllNeighborhoodPermutationsCheckBox.setSelected(Boolean.valueOf(p.readLine()));
+                testAllBalancedRulesCheckBox.setSelected(Boolean.valueOf(p.readLine()));
 
-                if (test_all_neighborhood_variations) {
-                    testAllNeighborhoodVariationsRadioButton.doClick();
-                } else if (test_all_neighborhood_sizes) {
-                    testAllNeighborhoodSizesRadioButton.doClick();
-                } else if (test_all_neighborhoods) {
-                    testAllNeighborhoodsRadioButton.doClick();
-                }
+
+
                 String neighborhood = p.readLine();
-                String significant_neighborhood = p.readLine();
-                String neighborhood_size = p.readLine();
-                String number_of_cell_states = p.readLine();
-                String rule_field = p.readLine();
-                String boolean_rule_field = p.readLine();
-
                 if (neighborhoodField.isEnabled()) {
                     neighborhoodField.setText(neighborhood);
                 }
-                if (significantNeighborhoodSizeField.isEnabled()) {
-                    significantNeighborhoodSizeField.setText(significant_neighborhood);
-                }
-                if (neighborhoodSizeField.isEnabled()) {
-                    neighborhoodSizeField.setText(neighborhood_size);
-                }
-                if (numberOfCellStatesField.isEnabled()) {
-                    numberOfCellStatesField.setText(number_of_cell_states);
-                }
+
+                minSignificantNeighborhoodSizeTextField.setText(p.readLine());
+                maxSignificantNeighborhoodSizeTextField.setText(p.readLine());
+                minNeighborhoodSizeTextField.setText(p.readLine());
+                maxNeighborhoodSizeTextField.setText(p.readLine());
+
+                numberOfCellStatesField.setText(p.readLine());
+
+                String rule_field = p.readLine();
                 if (ruleField.isEnabled()) {
                     ruleField.setText(rule_field);
-                }
-                if (booleanRuleField.isEnabled()) {
-                    booleanRuleField.setText(boolean_rule_field);
                 }
 
                 boolean output_all = Boolean.valueOf(p.readLine());
                 boolean output_surjective = Boolean.valueOf(p.readLine());
                 boolean output_only_injective = Boolean.valueOf(p.readLine());
 
-                if (output_surjective) {
+                if (output_all) {
+                    outputAllRadioButton.doClick();
+                } else if (output_surjective) {
                     outputSurjectiveRadioButton.doClick();
                 } else if (output_only_injective) {
                     outputOnlyInjectiveRadioButton.doClick();
                 }
 
-                boolean generate_graph = Boolean.valueOf(p.readLine());
                 boolean add_to_database = Boolean.valueOf(p.readLine());
+                boolean generate_graph = Boolean.valueOf(p.readLine());
+                boolean simulator_output = Boolean.valueOf(p.readLine());
                 boolean check_duplicates = Boolean.valueOf(p.readLine());
                 boolean use_fast_cpp_plugin = Boolean.valueOf(p.readLine());
+
                 boolean show_polynomial_rule = Boolean.valueOf(p.readLine());
 
+                boolean boolean_output = Boolean.valueOf(p.readLine());
+                boolean polynomial_output = Boolean.valueOf(p.readLine());
+
                 generateGraphCheckBox.setSelected(generate_graph);
+                simulatorOutputCheckBox.setSelected(simulator_output);
                 addToDatabaseCheckBox.setSelected(add_to_database);
                 checkDatabaseDuplicatesCheckBox.setSelected(check_duplicates);
                 useFastCPPPluginCheckBox.setSelected(use_fast_cpp_plugin);
-                
+
                 polynomialRuleCheckBox.setSelected(show_polynomial_rule);
+
+                outputBooleanRepresentationCheckBox.setSelected(boolean_output);
+                outputPolynomialRepresentationCheckBox.setSelected(polynomial_output);
+
+                calculationStepsTextField.setText(p.readLine());
+                simulatorConfigurationSizeTextField.setText(p.readLine());
+                startConfigurationTextField.setText(p.readLine());
+
 
                 loadFromFields();
 
@@ -131,10 +162,14 @@ public class Main extends java.awt.Frame {
                 System.out.println("IO Exception: Error " + e + " reading from file " + my_file.getAbsoluteFile());
             } catch (NumberFormatException e) {
                 System.out.println("NumberFormatException: Error " + e + " reading from file " + my_file.getAbsoluteFile());
+            } catch (Exception e) {
+                System.out.println("Exception: Error " + e);
             }
-            my_file.delete();
+
+            if (!my_file.delete()) {
+                System.out.println("Could not delete cfg file " + file_name + ".");
+            }
         }
-        updateRuleFields();
 
     }
 
@@ -153,14 +188,18 @@ public class Main extends java.awt.Frame {
         catestPane = new javax.swing.JTabbedPane();
         testPanel = new javax.swing.JPanel();
         neighborhoodConfigurationPanel = new javax.swing.JPanel();
-        neighborhoodSizeField = new javax.swing.JTextField();
-        significantNeighborhoodSizeField = new javax.swing.JTextField();
+        minNeighborhoodSizeTextField = new javax.swing.JTextField();
+        minSignificantNeighborhoodSizeTextField = new javax.swing.JTextField();
         neighborhoodField = new javax.swing.JTextField();
-        neighborhoodSizeLabel = new javax.swing.JLabel();
         significantNeighborhoodSizeLabel = new javax.swing.JLabel();
         neighborhoodLabel = new javax.swing.JLabel();
         numberOfCellStatesLabel = new javax.swing.JLabel();
         numberOfCellStatesField = new javax.swing.JTextField();
+        slashLabel = new javax.swing.JLabel();
+        dots1Label = new javax.swing.JLabel();
+        maxSignificantNeighborhoodSizeTextField = new javax.swing.JTextField();
+        maxNeighborhoodSizeTextField = new javax.swing.JTextField();
+        dots2Label = new javax.swing.JLabel();
         calculationPanel = new javax.swing.JPanel();
         neededTimeLabel = new javax.swing.JLabel();
         neededTimeField = new javax.swing.JLabel();
@@ -179,31 +218,43 @@ public class Main extends java.awt.Frame {
         booleanRepresentationLabel = new javax.swing.JLabel();
         ruleNumberLabel = new javax.swing.JLabel();
         polynomialRuleCheckBox = new javax.swing.JCheckBox();
+        testAllBalancedRulesCheckBox = new javax.swing.JCheckBox();
         outputOptionsPanel = new javax.swing.JPanel();
         outputAllRadioButton = new javax.swing.JRadioButton();
         outputSurjectiveRadioButton = new javax.swing.JRadioButton();
         outputOnlyInjectiveRadioButton = new javax.swing.JRadioButton();
-        generateGraphCheckBox = new javax.swing.JCheckBox();
-        addToDatabaseCheckBox = new javax.swing.JCheckBox();
-        useFastCPPPluginCheckBox = new javax.swing.JCheckBox();
-        checkDatabaseDuplicatesCheckBox = new javax.swing.JCheckBox();
-        automationPanel = new javax.swing.JPanel();
-        singleRuleTestRadioButton = new javax.swing.JRadioButton();
-        allRuleTestRadioButton = new javax.swing.JRadioButton();
-        allNeighborhoodRuleTestRadioButton = new javax.swing.JRadioButton();
-        automaticTestsPanel = new javax.swing.JPanel();
-        testSingleNeighborhoodRadioButton = new javax.swing.JRadioButton();
-        testAllNeighborhoodVariationsRadioButton = new javax.swing.JRadioButton();
-        testAllNeighborhoodSizesRadioButton = new javax.swing.JRadioButton();
-        testAllNeighborhoodsRadioButton = new javax.swing.JRadioButton();
-        jPanel1 = new javax.swing.JPanel();
+        outputBooleanRepresentationCheckBox = new javax.swing.JCheckBox();
+        outputPolynomialRepresentationCheckBox = new javax.swing.JCheckBox();
+        contactPanel = new javax.swing.JPanel();
         saveEndProgramButton = new javax.swing.JButton();
         versionLabel = new javax.swing.JLabel();
         contactLabel1 = new javax.swing.JLabel();
         contactLabel = new javax.swing.JLabel();
         endProgramButton = new javax.swing.JButton();
+        simulatorStartConfigurationPanel = new javax.swing.JPanel();
+        simulatorConfigurationSizeLabel = new javax.swing.JLabel();
+        simulatorConfigurationSizeTextField = new javax.swing.JTextField();
+        startConfigurationLabel = new javax.swing.JLabel();
+        startConfigurationTextField = new javax.swing.JTextField();
+        saveSimulatorConfigurationButton = new javax.swing.JButton();
+        loadSimulatorConfigurationButton = new javax.swing.JButton();
+        generateNewSimulatorConfigurationButton = new javax.swing.JButton();
+        zoomLabel = new javax.swing.JLabel();
+        zoomSlider = new javax.swing.JSlider();
+        calculationStepsTextField = new javax.swing.JTextField();
+        calculationStepsLabel = new javax.swing.JLabel();
+        startSimulationButton = new javax.swing.JButton();
+        automaticTestsPanel = new javax.swing.JPanel();
+        testAllNeighborhoodVariationsCheckBox = new javax.swing.JCheckBox();
+        testAllNeighborhoodPermutationsCheckBox = new javax.swing.JCheckBox();
+        miscOptionsPanel = new javax.swing.JPanel();
+        useFastCPPPluginCheckBox = new javax.swing.JCheckBox();
+        checkDatabaseDuplicatesCheckBox = new javax.swing.JCheckBox();
+        addToDatabaseCheckBox = new javax.swing.JCheckBox();
+        generateGraphCheckBox = new javax.swing.JCheckBox();
+        simulatorOutputCheckBox = new javax.swing.JCheckBox();
         resultsPanel = new javax.swing.JPanel();
-        jScrollPane1 = new javax.swing.JScrollPane();
+        resultsScrollPane = new javax.swing.JScrollPane();
         resultTable = new javax.swing.JTable();
         eraseMarkedEntriesButton = new javax.swing.JButton();
         saveResultsButton = new javax.swing.JButton();
@@ -211,46 +262,50 @@ public class Main extends java.awt.Frame {
         showImageButton = new javax.swing.JButton();
         eraseAllEntriesButton = new javax.swing.JButton();
         generateImageButton = new javax.swing.JButton();
+        generateSimulationButton = new javax.swing.JButton();
+        showSimulationButton = new javax.swing.JButton();
 
         setBackground(java.awt.Color.lightGray);
         setFocusTraversalPolicy(getFocusTraversalPolicy());
         setFocusTraversalPolicyProvider(true);
-        setTitle("Test CA surjectivity and injectivity");
+        setResizable(false);
+        setTitle("Simulate 1D-CA and test CA-surjectivity and -injectivity");
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosing(java.awt.event.WindowEvent evt) {
                 exitForm(evt);
             }
         });
 
-        neighborhoodConfigurationPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Neighborhood Configuration"));
+        neighborhoodConfigurationPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Neighborhood Configuration", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Arial", 1, 11)));
 
-        neighborhoodSizeField.setText("2");
-        neighborhoodSizeField.setFocusCycleRoot(true);
-        neighborhoodSizeField.setFocusTraversalPolicyProvider(true);
-        neighborhoodSizeField.setPreferredSize(new java.awt.Dimension(80, 20));
-        neighborhoodSizeField.addActionListener(new java.awt.event.ActionListener() {
+        minNeighborhoodSizeTextField.setText("2");
+        minNeighborhoodSizeTextField.setFocusCycleRoot(true);
+        minNeighborhoodSizeTextField.setFocusTraversalPolicyProvider(true);
+        minNeighborhoodSizeTextField.setPreferredSize(new java.awt.Dimension(80, 20));
+        minNeighborhoodSizeTextField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                neighborhoodSizeFieldActionPerformed(evt);
+                minNeighborhoodSizeTextFieldActionPerformed(evt);
             }
         });
-        neighborhoodSizeField.addFocusListener(new java.awt.event.FocusAdapter() {
+        minNeighborhoodSizeTextField.addFocusListener(new java.awt.event.FocusAdapter() {
             public void focusLost(java.awt.event.FocusEvent evt) {
-                neighborhoodSizeFieldFocusLost(evt);
+                minNeighborhoodSizeTextFieldFocusLost(evt);
             }
         });
 
-        significantNeighborhoodSizeField.setText("2");
-        significantNeighborhoodSizeField.setFocusCycleRoot(true);
-        significantNeighborhoodSizeField.setFocusTraversalPolicyProvider(true);
-        significantNeighborhoodSizeField.setPreferredSize(new java.awt.Dimension(80, 20));
-        significantNeighborhoodSizeField.addActionListener(new java.awt.event.ActionListener() {
+        minSignificantNeighborhoodSizeTextField.setText("2");
+        minSignificantNeighborhoodSizeTextField.setEnabled(false);
+        minSignificantNeighborhoodSizeTextField.setFocusCycleRoot(true);
+        minSignificantNeighborhoodSizeTextField.setFocusTraversalPolicyProvider(true);
+        minSignificantNeighborhoodSizeTextField.setPreferredSize(new java.awt.Dimension(80, 20));
+        minSignificantNeighborhoodSizeTextField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                significantNeighborhoodSizeFieldActionPerformed(evt);
+                minSignificantNeighborhoodSizeTextFieldActionPerformed(evt);
             }
         });
-        significantNeighborhoodSizeField.addFocusListener(new java.awt.event.FocusAdapter() {
+        minSignificantNeighborhoodSizeTextField.addFocusListener(new java.awt.event.FocusAdapter() {
             public void focusLost(java.awt.event.FocusEvent evt) {
-                significantNeighborhoodSizeFieldFocusLost(evt);
+                minSignificantNeighborhoodSizeTextFieldFocusLost(evt);
             }
         });
 
@@ -269,12 +324,13 @@ public class Main extends java.awt.Frame {
             }
         });
 
-        neighborhoodSizeLabel.setText("Neighborhood Size");
+        significantNeighborhoodSizeLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        significantNeighborhoodSizeLabel.setText("Significant Neighborhood Size / Neighborhood Size");
 
-        significantNeighborhoodSizeLabel.setText("Significant Neighborhood Size");
-
+        neighborhoodLabel.setFont(new java.awt.Font("Arial", 1, 12));
         neighborhoodLabel.setText("Neighborhood");
 
+        numberOfCellStatesLabel.setFont(new java.awt.Font("Arial", 1, 12));
         numberOfCellStatesLabel.setText("Number of Cell States");
 
         numberOfCellStatesField.setText("2");
@@ -292,72 +348,126 @@ public class Main extends java.awt.Frame {
             }
         });
 
+        slashLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        slashLabel.setText("/");
+
+        dots1Label.setFont(new java.awt.Font("Arial", 0, 12));
+        dots1Label.setText("...");
+
+        maxSignificantNeighborhoodSizeTextField.setText("2");
+        maxSignificantNeighborhoodSizeTextField.setEnabled(false);
+        maxSignificantNeighborhoodSizeTextField.setFocusCycleRoot(true);
+        maxSignificantNeighborhoodSizeTextField.setFocusTraversalPolicyProvider(true);
+        maxSignificantNeighborhoodSizeTextField.setPreferredSize(new java.awt.Dimension(80, 20));
+        maxSignificantNeighborhoodSizeTextField.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                maxSignificantNeighborhoodSizeTextFieldActionPerformed(evt);
+            }
+        });
+        maxSignificantNeighborhoodSizeTextField.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                maxSignificantNeighborhoodSizeTextFieldFocusLost(evt);
+            }
+        });
+
+        maxNeighborhoodSizeTextField.setText("2");
+        maxNeighborhoodSizeTextField.setFocusCycleRoot(true);
+        maxNeighborhoodSizeTextField.setFocusTraversalPolicyProvider(true);
+        maxNeighborhoodSizeTextField.setPreferredSize(new java.awt.Dimension(80, 20));
+        maxNeighborhoodSizeTextField.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                maxNeighborhoodSizeTextFieldActionPerformed(evt);
+            }
+        });
+        maxNeighborhoodSizeTextField.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                maxNeighborhoodSizeTextFieldFocusLost(evt);
+            }
+        });
+
+        dots2Label.setFont(new java.awt.Font("Arial", 0, 12));
+        dots2Label.setText("...");
+
         org.jdesktop.layout.GroupLayout neighborhoodConfigurationPanelLayout = new org.jdesktop.layout.GroupLayout(neighborhoodConfigurationPanel);
         neighborhoodConfigurationPanel.setLayout(neighborhoodConfigurationPanelLayout);
         neighborhoodConfigurationPanelLayout.setHorizontalGroup(
             neighborhoodConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(org.jdesktop.layout.GroupLayout.TRAILING, neighborhoodConfigurationPanelLayout.createSequentialGroup()
-                .add(348, 348, 348)
-                .add(neighborhoodConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, neighborhoodConfigurationPanelLayout.createSequentialGroup()
-                        .add(neighborhoodLabel)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(neighborhoodField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 180, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, neighborhoodConfigurationPanelLayout.createSequentialGroup()
-                        .add(28, 28, 28)
-                        .add(significantNeighborhoodSizeLabel)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(significantNeighborhoodSizeField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 49, Short.MAX_VALUE))
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, neighborhoodConfigurationPanelLayout.createSequentialGroup()
-                        .add(109, 109, 109)
-                        .add(neighborhoodSizeLabel)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(neighborhoodSizeField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 49, Short.MAX_VALUE))
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, neighborhoodConfigurationPanelLayout.createSequentialGroup()
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 84, Short.MAX_VALUE)
+            .add(neighborhoodConfigurationPanelLayout.createSequentialGroup()
+                .add(neighborhoodConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
+                    .add(neighborhoodConfigurationPanelLayout.createSequentialGroup()
+                        .add(51, 51, 51)
+                        .add(significantNeighborhoodSizeLabel))
+                    .add(neighborhoodConfigurationPanelLayout.createSequentialGroup()
+                        .addContainerGap()
                         .add(numberOfCellStatesLabel)
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(numberOfCellStatesField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 45, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))))
+                        .add(numberOfCellStatesField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 45, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .add(neighborhoodLabel)))
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
+                .add(neighborhoodConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
+                    .add(neighborhoodConfigurationPanelLayout.createSequentialGroup()
+                        .add(minSignificantNeighborhoodSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 35, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(dots1Label)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(maxSignificantNeighborhoodSizeTextField, 0, 0, Short.MAX_VALUE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(slashLabel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 13, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                        .add(12, 12, 12)
+                        .add(minNeighborhoodSizeTextField, 0, 0, Short.MAX_VALUE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(dots2Label)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(maxNeighborhoodSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 30, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                    .add(neighborhoodField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 242, Short.MAX_VALUE))
+                .addContainerGap())
         );
 
-        neighborhoodConfigurationPanelLayout.linkSize(new java.awt.Component[] {neighborhoodSizeField, numberOfCellStatesField, significantNeighborhoodSizeField}, org.jdesktop.layout.GroupLayout.HORIZONTAL);
+        neighborhoodConfigurationPanelLayout.linkSize(new java.awt.Component[] {maxNeighborhoodSizeTextField, maxSignificantNeighborhoodSizeTextField, minNeighborhoodSizeTextField, minSignificantNeighborhoodSizeTextField}, org.jdesktop.layout.GroupLayout.HORIZONTAL);
 
         neighborhoodConfigurationPanelLayout.setVerticalGroup(
             neighborhoodConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(neighborhoodConfigurationPanelLayout.createSequentialGroup()
                 .add(neighborhoodConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(numberOfCellStatesField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(numberOfCellStatesLabel))
+                    .add(numberOfCellStatesLabel)
+                    .add(neighborhoodLabel)
+                    .add(neighborhoodField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(neighborhoodConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(neighborhoodSizeLabel)
-                    .add(neighborhoodSizeField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(neighborhoodConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(significantNeighborhoodSizeLabel)
-                    .add(significantNeighborhoodSizeField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(neighborhoodConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(neighborhoodField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(neighborhoodLabel)))
+                    .add(dots2Label)
+                    .add(slashLabel)
+                    .add(minNeighborhoodSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(maxNeighborhoodSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(dots1Label)
+                    .add(minSignificantNeighborhoodSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(maxSignificantNeighborhoodSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(significantNeighborhoodSizeLabel)))
         );
 
-        calculationPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Calculation", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Tahoma", 1, 11))); // NOI18N
+        calculationPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Calculation", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Tahoma", 1, 11)));
 
+        neededTimeLabel.setFont(new java.awt.Font("Arial", 0, 12));
         neededTimeLabel.setText("Needed calculation time");
 
+        neededTimeField.setFont(new java.awt.Font("Arial", 0, 12));
         neededTimeField.setText("0s");
         neededTimeField.setToolTipText("Estimated time for the whole calculation, including testing of multiple rules/neighborhoods/cell states");
 
+        neededMemoryLabel.setFont(new java.awt.Font("Arial", 0, 12));
         neededMemoryLabel.setText("Needed Memory");
 
+        neededMemoryField.setFont(new java.awt.Font("Arial", 0, 12));
         neededMemoryField.setText("0mb");
         neededMemoryField.setToolTipText("Upper limit of memory that will be needed for the calculation");
 
         progressBar.setStringPainted(true);
 
+        progressBarLabel.setFont(new java.awt.Font("Arial", 0, 12));
         progressBarLabel.setText("Calculation Progress");
 
+        stopCalculationButton.setFont(new java.awt.Font("Arial", 0, 12));
         stopCalculationButton.setText("Stop Calculation");
         stopCalculationButton.setEnabled(false);
         stopCalculationButton.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -366,7 +476,7 @@ public class Main extends java.awt.Frame {
             }
         });
 
-        startCalculationButton.setFont(new java.awt.Font("Tahoma", 1, 11));
+        startCalculationButton.setFont(new java.awt.Font("Arial", 1, 12));
         startCalculationButton.setText("Start Calculation");
         startCalculationButton.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
@@ -374,40 +484,51 @@ public class Main extends java.awt.Frame {
             }
         });
 
-        rulesToTestLabel.setText("Number of rules to test");
+        rulesToTestLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        rulesToTestLabel.setText("Number of nodes to calculate");
 
+        rulesToTestField.setFont(new java.awt.Font("Arial", 0, 12));
         rulesToTestField.setText("1");
 
         org.jdesktop.layout.GroupLayout calculationPanelLayout = new org.jdesktop.layout.GroupLayout(calculationPanel);
         calculationPanel.setLayout(calculationPanelLayout);
         calculationPanelLayout.setHorizontalGroup(
             calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(calculationPanelLayout.createSequentialGroup()
+            .add(org.jdesktop.layout.GroupLayout.TRAILING, calculationPanelLayout.createSequentialGroup()
+                .add(24, 24, 24)
+                .add(calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING, false)
+                    .add(neededMemoryLabel)
+                    .add(rulesToTestLabel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .add(neededTimeLabel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, calculationPanelLayout.createSequentialGroup()
-                        .addContainerGap()
-                        .add(startCalculationButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 139, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                        .add(38, 38, 38)
-                        .add(stopCalculationButton))
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, calculationPanelLayout.createSequentialGroup()
-                        .add(24, 24, 24)
-                        .add(calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
-                            .add(neededMemoryLabel)
-                            .add(neededTimeLabel)
-                            .add(progressBarLabel)
-                            .add(rulesToTestLabel))
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                            .add(neededTimeField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 128, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                            .add(progressBar, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 197, Short.MAX_VALUE)
-                            .add(neededMemoryField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 153, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                            .add(rulesToTestField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 153, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))))
+                    .add(calculationPanelLayout.createSequentialGroup()
+                        .add(rulesToTestField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 218, Short.MAX_VALUE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED))
+                    .add(neededTimeField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 218, Short.MAX_VALUE)
+                    .add(neededMemoryField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 218, Short.MAX_VALUE))
                 .addContainerGap())
+            .add(calculationPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .add(calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                    .add(progressBar, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 389, Short.MAX_VALUE)
+                    .add(calculationPanelLayout.createSequentialGroup()
+                        .add(startCalculationButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 133, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 123, Short.MAX_VALUE)
+                        .add(stopCalculationButton)))
+                .addContainerGap())
+            .add(org.jdesktop.layout.GroupLayout.TRAILING, calculationPanelLayout.createSequentialGroup()
+                .addContainerGap(154, Short.MAX_VALUE)
+                .add(progressBarLabel)
+                .add(139, 139, 139))
         );
+
+        calculationPanelLayout.linkSize(new java.awt.Component[] {startCalculationButton, stopCalculationButton}, org.jdesktop.layout.GroupLayout.HORIZONTAL);
+
         calculationPanelLayout.setVerticalGroup(
             calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(org.jdesktop.layout.GroupLayout.TRAILING, calculationPanelLayout.createSequentialGroup()
-                .addContainerGap(23, Short.MAX_VALUE)
+                .addContainerGap()
                 .add(calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(rulesToTestLabel)
                     .add(rulesToTestField))
@@ -420,17 +541,17 @@ public class Main extends java.awt.Frame {
                     .add(neededMemoryLabel)
                     .add(neededMemoryField))
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(progressBarLabel)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .add(progressBar, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
                 .add(calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(progressBar, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(progressBarLabel))
-                .add(18, 18, 18)
-                .add(calculationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(stopCalculationButton)
-                    .add(startCalculationButton))
+                    .add(startCalculationButton)
+                    .add(stopCalculationButton))
                 .addContainerGap())
         );
 
-        ruleConfigurationPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Rule Configuration"));
+        ruleConfigurationPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Rule Configuration", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Arial", 1, 11)));
 
         ruleField.setText("42");
         ruleField.setFocusCycleRoot(true);
@@ -459,7 +580,7 @@ public class Main extends java.awt.Frame {
             }
         });
 
-        polynomialRuleField.setText("x0^2 + 2 x0 x1 + x1^2");
+        polynomialRuleField.setText("deactivated");
         polynomialRuleField.setEnabled(false);
         polynomialRuleField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -472,15 +593,26 @@ public class Main extends java.awt.Frame {
             }
         });
 
+        booleanRepresentationLabel.setFont(new java.awt.Font("Arial", 0, 12));
         booleanRepresentationLabel.setText("Boolean Representation");
 
+        ruleNumberLabel.setFont(new java.awt.Font("Arial", 1, 12));
         ruleNumberLabel.setText("Rule Number");
 
+        polynomialRuleCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
         polynomialRuleCheckBox.setText("Polynomial Representation");
-        polynomialRuleCheckBox.setEnabled(false);
+        polynomialRuleCheckBox.setBorder(null);
         polynomialRuleCheckBox.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 polynomialRuleCheckBoxActionPerformed(evt);
+            }
+        });
+
+        testAllBalancedRulesCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
+        testAllBalancedRulesCheckBox.setText("all balanced rules");
+        testAllBalancedRulesCheckBox.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                testAllBalancedRulesCheckBoxItemStateChanged(evt);
             }
         });
 
@@ -488,40 +620,42 @@ public class Main extends java.awt.Frame {
         ruleConfigurationPanel.setLayout(ruleConfigurationPanelLayout);
         ruleConfigurationPanelLayout.setHorizontalGroup(
             ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(org.jdesktop.layout.GroupLayout.TRAILING, ruleConfigurationPanelLayout.createSequentialGroup()
-                .add(31, 31, 31)
+            .add(ruleConfigurationPanelLayout.createSequentialGroup()
+                .addContainerGap()
                 .add(ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
-                    .add(ruleNumberLabel)
-                    .add(booleanRepresentationLabel)
-                    .add(polynomialRuleCheckBox))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(booleanRuleField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 401, Short.MAX_VALUE)
-                    .add(polynomialRuleField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 401, Short.MAX_VALUE)
                     .add(ruleConfigurationPanelLayout.createSequentialGroup()
-                        .add(ruleField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 401, Short.MAX_VALUE)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)))
-                .addContainerGap())
+                        .add(testAllBalancedRulesCheckBox)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 94, Short.MAX_VALUE)
+                        .add(ruleNumberLabel))
+                    .add(polynomialRuleCheckBox)
+                    .add(booleanRepresentationLabel))
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING, false)
+                    .add(booleanRuleField)
+                    .add(polynomialRuleField)
+                    .add(ruleField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 507, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
         );
         ruleConfigurationPanelLayout.setVerticalGroup(
             ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(ruleConfigurationPanelLayout.createSequentialGroup()
                 .add(ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(ruleNumberLabel)
+                    .add(testAllBalancedRulesCheckBox)
                     .add(ruleField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(booleanRepresentationLabel)
-                    .add(booleanRuleField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                    .add(booleanRuleField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(booleanRepresentationLabel))
+                .add(3, 3, 3)
                 .add(ruleConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(polynomialRuleField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                     .add(polynomialRuleCheckBox)))
         );
 
-        outputOptionsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Output options"));
+        outputOptionsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Database Output options", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Arial", 1, 11)));
 
         chooseOutputInjectiveSurjectiveButtonGroup.add(outputAllRadioButton);
+        outputAllRadioButton.setFont(new java.awt.Font("Arial", 0, 12));
         outputAllRadioButton.setSelected(true);
         outputAllRadioButton.setText("All");
         outputAllRadioButton.setToolTipText("Report all results");
@@ -529,53 +663,41 @@ public class Main extends java.awt.Frame {
         outputAllRadioButton.setMargin(new java.awt.Insets(0, 0, 0, 0));
 
         chooseOutputInjectiveSurjectiveButtonGroup.add(outputSurjectiveRadioButton);
+        outputSurjectiveRadioButton.setFont(new java.awt.Font("Arial", 0, 12));
         outputSurjectiveRadioButton.setText("At least surjective");
         outputSurjectiveRadioButton.setToolTipText("Only report those results that are either surjective or surjective and injective");
         outputSurjectiveRadioButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
         outputSurjectiveRadioButton.setMargin(new java.awt.Insets(0, 0, 0, 0));
 
         chooseOutputInjectiveSurjectiveButtonGroup.add(outputOnlyInjectiveRadioButton);
-        outputOnlyInjectiveRadioButton.setText("Only both injective and surjective");
+        outputOnlyInjectiveRadioButton.setFont(new java.awt.Font("Arial", 0, 12));
+        outputOnlyInjectiveRadioButton.setText("At least injective");
         outputOnlyInjectiveRadioButton.setToolTipText("Filter all results that are not surjective or not injective");
         outputOnlyInjectiveRadioButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
         outputOnlyInjectiveRadioButton.setMargin(new java.awt.Insets(0, 0, 0, 0));
 
-        generateGraphCheckBox.setText("Generate Graph (.viz file)");
-        generateGraphCheckBox.setToolTipText("Generate File for GraphViz in order to later generate a graph file");
-        generateGraphCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        generateGraphCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        outputBooleanRepresentationCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
+        outputBooleanRepresentationCheckBox.setText("Boolean Representation");
+        outputBooleanRepresentationCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
+        outputBooleanRepresentationCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
 
-        addToDatabaseCheckBox.setSelected(true);
-        addToDatabaseCheckBox.setText("Add result to database");
-        addToDatabaseCheckBox.setToolTipText("Instead of a simple output all results will be put into a database (tab 'Results')");
-        addToDatabaseCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        addToDatabaseCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
-
-        useFastCPPPluginCheckBox.setText("Use fast C plugin");
-        useFastCPPPluginCheckBox.setToolTipText("Call external 'catest_c', faster + less memory usage, use only for small number of test cases");
-        useFastCPPPluginCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        useFastCPPPluginCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
-        useFastCPPPluginCheckBox.addItemListener(new java.awt.event.ItemListener() {
-            public void itemStateChanged(java.awt.event.ItemEvent evt) {
-                useFastCPPPluginCheckBoxItemStateChanged(evt);
-            }
-        });
-
-        checkDatabaseDuplicatesCheckBox.setText("Skip already calculated rules");
-        checkDatabaseDuplicatesCheckBox.setToolTipText("Check database prior to each calculation");
-        checkDatabaseDuplicatesCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
+        outputPolynomialRepresentationCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
+        outputPolynomialRepresentationCheckBox.setText("Polynomial Representation");
+        outputPolynomialRepresentationCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
+        outputPolynomialRepresentationCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
 
         org.jdesktop.layout.GroupLayout outputOptionsPanelLayout = new org.jdesktop.layout.GroupLayout(outputOptionsPanel);
         outputOptionsPanel.setLayout(outputOptionsPanelLayout);
         outputOptionsPanelLayout.setHorizontalGroup(
             outputOptionsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(useFastCPPPluginCheckBox)
-            .add(checkDatabaseDuplicatesCheckBox, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 199, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-            .add(addToDatabaseCheckBox)
-            .add(generateGraphCheckBox)
-            .add(outputAllRadioButton)
-            .add(outputSurjectiveRadioButton)
-            .add(outputOnlyInjectiveRadioButton)
+            .add(outputOptionsPanelLayout.createSequentialGroup()
+                .add(outputOptionsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                    .add(outputAllRadioButton)
+                    .add(outputSurjectiveRadioButton)
+                    .add(outputOnlyInjectiveRadioButton)
+                    .add(outputBooleanRepresentationCheckBox)
+                    .add(outputPolynomialRepresentationCheckBox))
+                .addContainerGap(22, Short.MAX_VALUE))
         );
         outputOptionsPanelLayout.setVerticalGroup(
             outputOptionsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
@@ -586,118 +708,239 @@ public class Main extends java.awt.Frame {
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(outputOnlyInjectiveRadioButton)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(generateGraphCheckBox, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 15, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .add(outputBooleanRepresentationCheckBox)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(addToDatabaseCheckBox)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(checkDatabaseDuplicatesCheckBox, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 18, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(useFastCPPPluginCheckBox))
+                .add(outputPolynomialRepresentationCheckBox))
         );
 
-        automationPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Automation"));
-
-        automationRuleButtonGroup.add(singleRuleTestRadioButton);
-        singleRuleTestRadioButton.setSelected(true);
-        singleRuleTestRadioButton.setText("Test a single rule only");
-        singleRuleTestRadioButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        singleRuleTestRadioButton.setMargin(new java.awt.Insets(0, 0, 0, 0));
-        singleRuleTestRadioButton.addItemListener(new java.awt.event.ItemListener() {
-            public void itemStateChanged(java.awt.event.ItemEvent evt) {
-                singleRuleTestRadioButtonItemStateChanged(evt);
+        saveEndProgramButton.setFont(new java.awt.Font("Arial", 1, 12));
+        saveEndProgramButton.setText("Save & End Program");
+        saveEndProgramButton.setToolTipText("Save the current database and settings and quit the program");
+        saveEndProgramButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                saveEndProgramButtonMouseClicked(evt);
             }
         });
 
-        automationRuleButtonGroup.add(allRuleTestRadioButton);
-        allRuleTestRadioButton.setText("Test all balanced rules");
-        allRuleTestRadioButton.setToolTipText("Test all rules that fit into the given 'Significant Neighborhood Size'");
-        allRuleTestRadioButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        allRuleTestRadioButton.setMargin(new java.awt.Insets(0, 0, 0, 0));
-        allRuleTestRadioButton.addItemListener(new java.awt.event.ItemListener() {
-            public void itemStateChanged(java.awt.event.ItemEvent evt) {
-                allRuleTestRadioButtonItemStateChanged(evt);
+        versionLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        versionLabel.setText("Version 1.060a (09/15/2008)");
+
+        contactLabel1.setFont(new java.awt.Font("Arial", 0, 12));
+        contactLabel1.setText("clemens@lode.de");
+
+        contactLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        contactLabel.setText("by Clemens Lode");
+
+        endProgramButton.setFont(new java.awt.Font("Arial", 0, 12));
+        endProgramButton.setText("End Program");
+        endProgramButton.setToolTipText("Ends the program, all settings and the database are not saved");
+        endProgramButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                endProgramButtonMouseClicked(evt);
             }
         });
 
-        automationRuleButtonGroup.add(allNeighborhoodRuleTestRadioButton);
-        allNeighborhoodRuleTestRadioButton.setText("Test all neighborhood permutations");
-        allNeighborhoodRuleTestRadioButton.setToolTipText("When permutating the neighborhood include disordered neighborhoods (e.g. 1,0,2)");
-        allNeighborhoodRuleTestRadioButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        allNeighborhoodRuleTestRadioButton.setMargin(new java.awt.Insets(0, 0, 0, 0));
-        allNeighborhoodRuleTestRadioButton.addItemListener(new java.awt.event.ItemListener() {
-            public void itemStateChanged(java.awt.event.ItemEvent evt) {
-                allNeighborhoodRuleTestRadioButtonItemStateChanged(evt);
-            }
-        });
-
-        org.jdesktop.layout.GroupLayout automationPanelLayout = new org.jdesktop.layout.GroupLayout(automationPanel);
-        automationPanel.setLayout(automationPanelLayout);
-        automationPanelLayout.setHorizontalGroup(
-            automationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(automationPanelLayout.createSequentialGroup()
+        org.jdesktop.layout.GroupLayout contactPanelLayout = new org.jdesktop.layout.GroupLayout(contactPanel);
+        contactPanel.setLayout(contactPanelLayout);
+        contactPanelLayout.setHorizontalGroup(
+            contactPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(contactPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .add(automationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(singleRuleTestRadioButton)
-                    .add(allNeighborhoodRuleTestRadioButton)
-                    .add(allRuleTestRadioButton))
-                .addContainerGap(20, Short.MAX_VALUE))
+                .add(contactPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                    .add(org.jdesktop.layout.GroupLayout.TRAILING, contactPanelLayout.createSequentialGroup()
+                        .add(contactPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                            .add(org.jdesktop.layout.GroupLayout.TRAILING, endProgramButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 161, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                            .add(org.jdesktop.layout.GroupLayout.TRAILING, saveEndProgramButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 161, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                        .addContainerGap())
+                    .add(contactPanelLayout.createSequentialGroup()
+                        .add(contactPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                            .add(versionLabel)
+                            .add(contactLabel)
+                            .add(contactLabel1))
+                        .addContainerGap(15, Short.MAX_VALUE))))
         );
-        automationPanelLayout.setVerticalGroup(
-            automationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(automationPanelLayout.createSequentialGroup()
-                .add(singleRuleTestRadioButton)
+        contactPanelLayout.setVerticalGroup(
+            contactPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(org.jdesktop.layout.GroupLayout.TRAILING, contactPanelLayout.createSequentialGroup()
+                .addContainerGap(50, Short.MAX_VALUE)
+                .add(versionLabel)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(allNeighborhoodRuleTestRadioButton)
+                .add(contactLabel)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(allRuleTestRadioButton)
-                .addContainerGap(18, Short.MAX_VALUE))
+                .add(contactLabel1)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
+                .add(endProgramButton)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(saveEndProgramButton)
+                .addContainerGap())
         );
 
-        automaticTestsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Automatic tests"));
+        versionLabel.getAccessibleContext().setAccessibleName("Version 1.060b (09/22/2008)");
 
-        automationNeighborhoodButtonGroup.add(testSingleNeighborhoodRadioButton);
-        testSingleNeighborhoodRadioButton.setSelected(true);
-        testSingleNeighborhoodRadioButton.setText("single neighborhood");
-        testSingleNeighborhoodRadioButton.setToolTipText("Test a single neighborhood given in the \"Neighborhood\" field");
-        testSingleNeighborhoodRadioButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        testSingleNeighborhoodRadioButton.setMargin(new java.awt.Insets(0, 0, 0, 0));
-        testSingleNeighborhoodRadioButton.addItemListener(new java.awt.event.ItemListener() {
-            public void itemStateChanged(java.awt.event.ItemEvent evt) {
-                testSingleNeighborhoodRadioButtonItemStateChanged(evt);
+        simulatorStartConfigurationPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Simulator Start Configuration", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Arial", 1, 11)));
+
+        simulatorConfigurationSizeLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        simulatorConfigurationSizeLabel.setText("Configuration size");
+
+        simulatorConfigurationSizeTextField.setText("256");
+        simulatorConfigurationSizeTextField.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                simulatorConfigurationSizeTextFieldActionPerformed(evt);
+            }
+        });
+        simulatorConfigurationSizeTextField.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                simulatorConfigurationSizeTextFieldFocusLost(evt);
             }
         });
 
-        automationNeighborhoodButtonGroup.add(testAllNeighborhoodVariationsRadioButton);
-        testAllNeighborhoodVariationsRadioButton.setText("all neighborhood variations");
-        testAllNeighborhoodVariationsRadioButton.setToolTipText("Test all neighborhood variations within the given range and specified number of positions in \"Neighborhood Size\" and \"Significant Neighborhood Size\"");
-        testAllNeighborhoodVariationsRadioButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        testAllNeighborhoodVariationsRadioButton.setMargin(new java.awt.Insets(0, 0, 0, 0));
-        testAllNeighborhoodVariationsRadioButton.addItemListener(new java.awt.event.ItemListener() {
-            public void itemStateChanged(java.awt.event.ItemEvent evt) {
-                testAllNeighborhoodVariationsRadioButtonItemStateChanged(evt);
+        startConfigurationLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        startConfigurationLabel.setText("Start configuration");
+
+        startConfigurationTextField.setText("0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1");
+
+        saveSimulatorConfigurationButton.setFont(new java.awt.Font("Arial", 0, 12));
+        saveSimulatorConfigurationButton.setText("Save...");
+        saveSimulatorConfigurationButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                saveSimulatorConfigurationButtonMouseClicked(evt);
             }
         });
 
-        automationNeighborhoodButtonGroup.add(testAllNeighborhoodSizesRadioButton);
-        testAllNeighborhoodSizesRadioButton.setText("all neighborhood sizes and variations");
-        testAllNeighborhoodSizesRadioButton.setToolTipText("Test all neighborhood variations up to the size specified in \"Neighborhood Size\" with the given number of positions in \"Significant Neighborhood Size\"");
-        testAllNeighborhoodSizesRadioButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        testAllNeighborhoodSizesRadioButton.setMargin(new java.awt.Insets(0, 0, 0, 0));
-        testAllNeighborhoodSizesRadioButton.addItemListener(new java.awt.event.ItemListener() {
-            public void itemStateChanged(java.awt.event.ItemEvent evt) {
-                testAllNeighborhoodSizesRadioButtonItemStateChanged(evt);
+        loadSimulatorConfigurationButton.setFont(new java.awt.Font("Arial", 0, 12));
+        loadSimulatorConfigurationButton.setText("Load...");
+        loadSimulatorConfigurationButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                loadSimulatorConfigurationButtonMouseClicked(evt);
             }
         });
 
-        automationNeighborhoodButtonGroup.add(testAllNeighborhoodsRadioButton);
-        testAllNeighborhoodsRadioButton.setText("all neighborhoods");
-        testAllNeighborhoodsRadioButton.setToolTipText("Test all neighborhood configurations up to the size specified in \"Neighborhood Size\"");
-        testAllNeighborhoodsRadioButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        testAllNeighborhoodsRadioButton.setEnabled(false);
-        testAllNeighborhoodsRadioButton.setMargin(new java.awt.Insets(0, 0, 0, 0));
-        testAllNeighborhoodsRadioButton.addItemListener(new java.awt.event.ItemListener() {
+        generateNewSimulatorConfigurationButton.setFont(new java.awt.Font("Arial", 0, 12));
+        generateNewSimulatorConfigurationButton.setText("Generate new");
+        generateNewSimulatorConfigurationButton.setToolTipText("Generates new random start configuration");
+        generateNewSimulatorConfigurationButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                generateNewSimulatorConfigurationButtonMouseClicked(evt);
+            }
+        });
+
+        zoomLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        zoomLabel.setText("Zoom");
+
+        zoomSlider.setMaximum(20);
+        zoomSlider.setMinimum(1);
+        zoomSlider.setPaintLabels(true);
+        zoomSlider.setPaintTicks(true);
+        zoomSlider.setSnapToTicks(true);
+        zoomSlider.setValue(2);
+        zoomSlider.addInputMethodListener(new java.awt.event.InputMethodListener() {
+            public void caretPositionChanged(java.awt.event.InputMethodEvent evt) {
+                zoomSliderCaretPositionChanged(evt);
+            }
+            public void inputMethodTextChanged(java.awt.event.InputMethodEvent evt) {
+            }
+        });
+
+        calculationStepsTextField.setText("256");
+        calculationStepsTextField.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                calculationStepsTextFieldActionPerformed(evt);
+            }
+        });
+        calculationStepsTextField.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                calculationStepsTextFieldFocusLost(evt);
+            }
+        });
+
+        calculationStepsLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        calculationStepsLabel.setText("Calculation steps");
+
+        startSimulationButton.setFont(new java.awt.Font("Arial", 1, 12));
+        startSimulationButton.setText("Start Simulation");
+        startSimulationButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                startSimulationButtonMouseClicked(evt);
+            }
+        });
+
+        org.jdesktop.layout.GroupLayout simulatorStartConfigurationPanelLayout = new org.jdesktop.layout.GroupLayout(simulatorStartConfigurationPanel);
+        simulatorStartConfigurationPanel.setLayout(simulatorStartConfigurationPanelLayout);
+        simulatorStartConfigurationPanelLayout.setHorizontalGroup(
+            simulatorStartConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(org.jdesktop.layout.GroupLayout.TRAILING, simulatorStartConfigurationPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .add(simulatorStartConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                    .add(simulatorStartConfigurationPanelLayout.createSequentialGroup()
+                        .add(simulatorConfigurationSizeLabel)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(simulatorConfigurationSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 41, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(saveSimulatorConfigurationButton)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(loadSimulatorConfigurationButton)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(generateNewSimulatorConfigurationButton)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 48, Short.MAX_VALUE)
+                        .add(startSimulationButton))
+                    .add(simulatorStartConfigurationPanelLayout.createSequentialGroup()
+                        .add(startConfigurationLabel)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(startConfigurationTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 477, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                    .add(simulatorStartConfigurationPanelLayout.createSequentialGroup()
+                        .add(zoomLabel)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(zoomSlider, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 396, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(calculationStepsLabel)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(calculationStepsTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 38, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap())
+        );
+        simulatorStartConfigurationPanelLayout.setVerticalGroup(
+            simulatorStartConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(org.jdesktop.layout.GroupLayout.TRAILING, simulatorStartConfigurationPanelLayout.createSequentialGroup()
+                .addContainerGap(21, Short.MAX_VALUE)
+                .add(simulatorStartConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
+                    .add(simulatorConfigurationSizeLabel)
+                    .add(simulatorConfigurationSizeTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(saveSimulatorConfigurationButton)
+                    .add(loadSimulatorConfigurationButton)
+                    .add(generateNewSimulatorConfigurationButton)
+                    .add(startSimulationButton))
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(simulatorStartConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
+                    .add(startConfigurationLabel)
+                    .add(startConfigurationTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(simulatorStartConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                    .add(zoomLabel)
+                    .add(simulatorStartConfigurationPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
+                        .add(calculationStepsLabel)
+                        .add(calculationStepsTextField, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                    .add(zoomSlider, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
+        );
+
+        automaticTestsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Automatic Tests", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Arial", 1, 11)));
+
+        testAllNeighborhoodVariationsCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
+        testAllNeighborhoodVariationsCheckBox.setText("all neighborhood variations");
+        testAllNeighborhoodVariationsCheckBox.setAlignmentY(0.0F);
+        testAllNeighborhoodVariationsCheckBox.setEnabled(false);
+        testAllNeighborhoodVariationsCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        testAllNeighborhoodVariationsCheckBox.addItemListener(new java.awt.event.ItemListener() {
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
-                testAllNeighborhoodsRadioButtonItemStateChanged(evt);
+                testAllNeighborhoodVariationsCheckBoxItemStateChanged(evt);
+            }
+        });
+
+        testAllNeighborhoodPermutationsCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
+        testAllNeighborhoodPermutationsCheckBox.setText("all neighborhood permutations");
+        testAllNeighborhoodPermutationsCheckBox.setAlignmentY(0.0F);
+        testAllNeighborhoodPermutationsCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        testAllNeighborhoodPermutationsCheckBox.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                testAllNeighborhoodPermutationsCheckBoxItemStateChanged(evt);
             }
         });
 
@@ -705,79 +948,94 @@ public class Main extends java.awt.Frame {
         automaticTestsPanel.setLayout(automaticTestsPanelLayout);
         automaticTestsPanelLayout.setHorizontalGroup(
             automaticTestsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(org.jdesktop.layout.GroupLayout.TRAILING, automaticTestsPanelLayout.createSequentialGroup()
-                .addContainerGap()
+            .add(automaticTestsPanelLayout.createSequentialGroup()
                 .add(automaticTestsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(testSingleNeighborhoodRadioButton)
-                    .add(testAllNeighborhoodVariationsRadioButton)
-                    .add(testAllNeighborhoodSizesRadioButton)
-                    .add(testAllNeighborhoodsRadioButton))
-                .addContainerGap(org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .add(testAllNeighborhoodVariationsCheckBox)
+                    .add(testAllNeighborhoodPermutationsCheckBox))
+                .addContainerGap(8, Short.MAX_VALUE))
         );
         automaticTestsPanelLayout.setVerticalGroup(
             automaticTestsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(automaticTestsPanelLayout.createSequentialGroup()
-                .add(testSingleNeighborhoodRadioButton)
+                .add(testAllNeighborhoodVariationsCheckBox)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(testAllNeighborhoodVariationsRadioButton)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(testAllNeighborhoodSizesRadioButton)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(testAllNeighborhoodsRadioButton)
-                .addContainerGap(23, Short.MAX_VALUE))
+                .add(testAllNeighborhoodPermutationsCheckBox))
         );
 
-        saveEndProgramButton.setFont(new java.awt.Font("Tahoma", 1, 11));
-        saveEndProgramButton.setText("Save & End Program");
-        saveEndProgramButton.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                saveEndProgramButtonMouseClicked(evt);
+        miscOptionsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Misc options", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Arial", 1, 11)));
+
+        useFastCPPPluginCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
+        useFastCPPPluginCheckBox.setText("Use fast C plugin");
+        useFastCPPPluginCheckBox.setToolTipText("Call external 'catest_c', faster + less memory usage, use only for small number of test cases");
+        useFastCPPPluginCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        useFastCPPPluginCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        useFastCPPPluginCheckBox.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                useFastCPPPluginCheckBoxItemStateChanged(evt);
             }
         });
 
-        versionLabel.setText("Version 1.059 (08/12/2008)");
+        checkDatabaseDuplicatesCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
+        checkDatabaseDuplicatesCheckBox.setToolTipText("Check database prior to each calculation");
+        checkDatabaseDuplicatesCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
+        checkDatabaseDuplicatesCheckBox.setLabel("Skip already calculated");
+        checkDatabaseDuplicatesCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
 
-        contactLabel1.setText("clemens@lode.de");
+        addToDatabaseCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
+        addToDatabaseCheckBox.setSelected(true);
+        addToDatabaseCheckBox.setText("Add result to database");
+        addToDatabaseCheckBox.setToolTipText("Instead of a simple output all results will be put into a database (tab 'Results')");
+        addToDatabaseCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        addToDatabaseCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
 
-        contactLabel.setText("by Clemens Lode");
-
-        endProgramButton.setText("End Program");
-        endProgramButton.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                endProgramButtonMouseClicked(evt);
+        generateGraphCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
+        generateGraphCheckBox.setText("Generate Graph (.viz file)");
+        generateGraphCheckBox.setToolTipText("Generate File for GraphViz in order to later generate a graph file");
+        generateGraphCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        generateGraphCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        generateGraphCheckBox.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                generateGraphCheckBoxItemStateChanged(evt);
             }
         });
 
-        org.jdesktop.layout.GroupLayout jPanel1Layout = new org.jdesktop.layout.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel1Layout.createSequentialGroup()
-                .addContainerGap(97, Short.MAX_VALUE)
-                .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, endProgramButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 161, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, saveEndProgramButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 161, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
-                            .add(org.jdesktop.layout.GroupLayout.TRAILING, contactLabel)
-                            .add(org.jdesktop.layout.GroupLayout.TRAILING, contactLabel1)
-                            .add(org.jdesktop.layout.GroupLayout.TRAILING, versionLabel))
-                        .addContainerGap())))
+        simulatorOutputCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
+        simulatorOutputCheckBox.setText("Simulator Output (.png file)");
+        simulatorOutputCheckBox.setToolTipText("Call external 'catest_c', faster + less memory usage, use only for small number of test cases");
+        simulatorOutputCheckBox.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        simulatorOutputCheckBox.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        simulatorOutputCheckBox.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                simulatorOutputCheckBoxItemStateChanged(evt);
+            }
+        });
+
+        org.jdesktop.layout.GroupLayout miscOptionsPanelLayout = new org.jdesktop.layout.GroupLayout(miscOptionsPanel);
+        miscOptionsPanel.setLayout(miscOptionsPanelLayout);
+        miscOptionsPanelLayout.setHorizontalGroup(
+            miscOptionsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(miscOptionsPanelLayout.createSequentialGroup()
+                .add(miscOptionsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                    .add(checkDatabaseDuplicatesCheckBox)
+                    .add(useFastCPPPluginCheckBox)
+                    .add(generateGraphCheckBox)
+                    .add(addToDatabaseCheckBox)
+                    .add(simulatorOutputCheckBox))
+                .addContainerGap(28, Short.MAX_VALUE))
         );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addContainerGap(45, Short.MAX_VALUE)
-                .add(versionLabel)
+        miscOptionsPanelLayout.setVerticalGroup(
+            miscOptionsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(miscOptionsPanelLayout.createSequentialGroup()
+                .add(addToDatabaseCheckBox)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(contactLabel)
+                .add(generateGraphCheckBox)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(contactLabel1)
-                .add(18, 18, 18)
-                .add(endProgramButton)
+                .add(simulatorOutputCheckBox, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 15, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(saveEndProgramButton)
-                .addContainerGap())
+                .add(checkDatabaseDuplicatesCheckBox)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(useFastCPPPluginCheckBox)
+                .addContainerGap(53, Short.MAX_VALUE))
         );
 
         org.jdesktop.layout.GroupLayout testPanelLayout = new org.jdesktop.layout.GroupLayout(testPanel);
@@ -786,48 +1044,59 @@ public class Main extends java.awt.Frame {
             testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(testPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
+                .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
                     .add(testPanelLayout.createSequentialGroup()
-                        .add(calculationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
+                            .add(org.jdesktop.layout.GroupLayout.TRAILING, testPanelLayout.createSequentialGroup()
+                                .add(4, 4, 4)
+                                .add(calculationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                                .add(contactPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                            .add(simulatorStartConfigurationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(outputOptionsPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                    .add(org.jdesktop.layout.GroupLayout.LEADING, ruleConfigurationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .add(org.jdesktop.layout.GroupLayout.LEADING, neighborhoodConfigurationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jPanel1, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .add(automationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .add(automaticTestsPanel, 0, 285, Short.MAX_VALUE))
-                .add(93, 93, 93))
+                        .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                            .add(miscOptionsPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .add(outputOptionsPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
+                    .add(testPanelLayout.createSequentialGroup()
+                        .add(neighborhoodConfigurationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(automaticTestsPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .add(ruleConfigurationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(19, Short.MAX_VALUE))
         );
         testPanelLayout.setVerticalGroup(
             testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(testPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(neighborhoodConfigurationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 133, Short.MAX_VALUE)
-                    .add(automaticTestsPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
+                    .add(automaticTestsPanel, 0, 75, Short.MAX_VALUE)
+                    .add(neighborhoodConfigurationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(ruleConfigurationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(automationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(ruleConfigurationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 110, Short.MAX_VALUE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                    .add(testPanelLayout.createSequentialGroup()
+                        .add(outputOptionsPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED))
+                    .add(simulatorStartConfigurationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
-                        .add(calculationPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .add(outputOptionsPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 185, Short.MAX_VALUE))
-                    .add(jPanel1, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap())
+                    .add(contactPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .add(testPanelLayout.createSequentialGroup()
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(testPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                            .add(calculationPanel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 181, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                            .add(miscOptionsPanel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                .add(28, 28, 28))
         );
 
         catestPane.addTab("Parameters & Test", testPanel);
 
-        jScrollPane1.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        jScrollPane1.setDoubleBuffered(true);
+        resultsScrollPane.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        resultsScrollPane.setDoubleBuffered(true);
 
         resultTable.setModel(results);
         int zzz = 1;
-        jScrollPane1.setViewportView(resultTable);
+        resultsScrollPane.setViewportView(resultTable);
 
         eraseMarkedEntriesButton.setText("Erase marked");
         eraseMarkedEntriesButton.setToolTipText("Press CTRL+A to mark all entries");
@@ -853,7 +1122,7 @@ public class Main extends java.awt.Frame {
         });
 
         showImageButton.setText("Show Image(s)");
-        showImageButton.setToolTipText("Display graphs of marked entries if availible");
+        showImageButton.setToolTipText("Display graphs of marked entries if available");
         showImageButton.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 showImageButtonMouseClicked(evt);
@@ -876,48 +1145,78 @@ public class Main extends java.awt.Frame {
             }
         });
 
+        generateSimulationButton.setText("Generate Simulation(s)");
+        generateSimulationButton.setToolTipText("Generate simulations of marked entries with the current settings (overwrites old simulation image)");
+        generateSimulationButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                generateSimulationButtonMouseClicked(evt);
+            }
+        });
+
+        showSimulationButton.setText("Show Simulation(s)");
+        showSimulationButton.setToolTipText("Display simulations of marked entries if available");
+        showSimulationButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                showSimulationButtonMouseClicked(evt);
+            }
+        });
+
         org.jdesktop.layout.GroupLayout resultsPanelLayout = new org.jdesktop.layout.GroupLayout(resultsPanel);
         resultsPanel.setLayout(resultsPanelLayout);
         resultsPanelLayout.setHorizontalGroup(
             resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(resultsPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jScrollPane1, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 937, Short.MAX_VALUE)
+            .add(org.jdesktop.layout.GroupLayout.TRAILING, resultsPanelLayout.createSequentialGroup()
+                .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
+                    .add(org.jdesktop.layout.GroupLayout.LEADING, resultsPanelLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .add(resultsScrollPane, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 830, Short.MAX_VALUE))
                     .add(resultsPanelLayout.createSequentialGroup()
+                        .add(37, 37, 37)
                         .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
-                            .add(eraseAllEntriesButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .add(eraseMarkedEntriesButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 97, Short.MAX_VALUE))
+                            .add(eraseAllEntriesButton)
+                            .add(eraseMarkedEntriesButton))
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                         .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
-                            .add(showImageButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .add(showImageButton)
                             .add(generateImageButton))
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 575, Short.MAX_VALUE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING, false)
+                            .add(generateSimulationButton)
+                            .add(showSimulationButton))
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 227, Short.MAX_VALUE)
                         .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
                             .add(org.jdesktop.layout.GroupLayout.TRAILING, loadResultsButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 113, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                             .add(org.jdesktop.layout.GroupLayout.TRAILING, saveResultsButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 113, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))))
                 .addContainerGap())
         );
+
+        resultsPanelLayout.linkSize(new java.awt.Component[] {eraseAllEntriesButton, eraseMarkedEntriesButton, generateImageButton, generateSimulationButton, loadResultsButton, saveResultsButton, showImageButton, showSimulationButton}, org.jdesktop.layout.GroupLayout.HORIZONTAL);
+
         resultsPanelLayout.setVerticalGroup(
             resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(org.jdesktop.layout.GroupLayout.TRAILING, resultsPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .add(jScrollPane1, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 384, Short.MAX_VALUE)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(loadResultsButton)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(saveResultsButton)
-                .addContainerGap())
             .add(resultsPanelLayout.createSequentialGroup()
-                .add(402, 402, 402)
-                .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(generateImageButton)
-                    .add(eraseMarkedEntriesButton))
+                .add(6, 6, 6)
+                .add(resultsScrollPane, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 428, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(showImageButton)
-                    .add(eraseAllEntriesButton))
-                .add(11, 11, 11))
+                .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                    .add(resultsPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                        .add(resultsPanelLayout.createSequentialGroup()
+                            .add(generateSimulationButton)
+                            .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                            .add(showSimulationButton))
+                        .add(org.jdesktop.layout.GroupLayout.TRAILING, resultsPanelLayout.createSequentialGroup()
+                            .add(generateImageButton)
+                            .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                            .add(showImageButton))
+                        .add(resultsPanelLayout.createSequentialGroup()
+                            .add(eraseMarkedEntriesButton)
+                            .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                            .add(eraseAllEntriesButton)))
+                    .add(resultsPanelLayout.createSequentialGroup()
+                        .add(loadResultsButton)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                        .add(saveResultsButton)))
+                .addContainerGap())
         );
 
         catestPane.addTab("Results", resultsPanel);
@@ -926,20 +1225,24 @@ public class Main extends java.awt.Frame {
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(catestPane, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 966, Short.MAX_VALUE)
+            .add(catestPane, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 855, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(catestPane, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 493, Short.MAX_VALUE)
+            .add(catestPane, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 550, Short.MAX_VALUE)
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+    
+    /**
+     * Updates function from the text of the wolfram rule field
+     */
     private void checkRuleField() {
         try {
             try {
-                ALGORITHM.Function.createSignificantFunction(new BigInteger(ruleField.getText())); 
-              //  System.out.println(ALGORITHM.Function.getSignificantFunctionString());
+                ALGORITHM.Function.createSignificantFunction(new BigInteger(ruleField.getText()));
+            //  System.out.println(ALGORITHM.Function.getSignificantFunctionString());
             } catch (NumberFormatException n) {
                 JOptionPane.showMessageDialog(this, "Please enter only numerals into the Rule Field", "Wrong number format", JOptionPane.ERROR_MESSAGE);
                 ruleField.requestFocusInWindow();
@@ -951,10 +1254,13 @@ public class Main extends java.awt.Frame {
 
     }
 
+    /**
+     * Updates function from the text of the boolean rule field
+     */
     private void checkBooleanRuleField() {
         try {
             try {
-                ALGORITHM.Function.createSignificantFunction(ALGORITHM.Function.extractBooleanRuleNumber(booleanRuleField.getText()));
+                ALGORITHM.Function.createSignificantFunction(ALGORITHM.BooleanRule.extractBooleanRuleNumber(booleanRuleField.getText(), ALGORITHM.Function.getSignificantMaxArraySize()));
             } catch (NumberFormatException n) {
                 JOptionPane.showMessageDialog(this, "Please check the syntax in the boolean rule field: " + n, "Syntax Error", JOptionPane.ERROR_MESSAGE);
                 booleanRuleField.requestFocusInWindow();
@@ -965,10 +1271,13 @@ public class Main extends java.awt.Frame {
         }
     }
 
+    /**
+     * Updates function from the text of the polynomial rule field
+     */
     private void checkPolynomialRuleField() {
         try {
             try {
-                ALGORITHM.Function.createSignificantFunction(ALGORITHM.Function.extractPolynomialRuleNumber(polynomialRuleField.getText()));
+                ALGORITHM.Function.createSignificantFunction(ALGORITHM.PolynomialRule.extractPolynomialRuleNumber(polynomialRuleField.getText(), ALGORITHM.Function.getSignificantMaxArraySize(), ALGORITHM.CellStates.getMaxNumberOfCellStates()));
             } catch (NumberFormatException n) {
                 JOptionPane.showMessageDialog(this, "Please check the syntax in the polynomial rule field: " + n, "Syntax Error", JOptionPane.ERROR_MESSAGE);
                 polynomialRuleField.requestFocusInWindow();
@@ -977,36 +1286,574 @@ public class Main extends java.awt.Frame {
             JOptionPane.showMessageDialog(this, e, "Polynomial Rule Number is out of range, please increase significant neighborhood size", JOptionPane.ERROR_MESSAGE);
             polynomialRuleField.requestFocusInWindow();
         }
-    }    
-    
-//   TODO, getSignificantRuleNumber liefert anfangs einen ungültigen Wert (0) ?
+    }
+
+    /**
+     * Updates wolfram rule field, boolean rule field and the polynomial rule field
+     */
     private void updateRuleFields() {
         if (ruleField.isEnabled()) {
-            ruleField.setText(ALGORITHM.Function.getSignificantRuleNumber().toString());
+            ruleField.setText(ALGORITHM.Function.getSignificantWolframRuleNumber().toString());
         }
-        if (ALGORITHM.Function.getNumberOfCellStates() != 2) {
-            booleanRuleField.setEnabled(false);
-            booleanRuleField.setText("only for binary case");
-        } else if (!booleanRuleField.isEnabled() && ruleField.isEnabled()) {
-            booleanRuleField.setEnabled(true);
+        if (ALGORITHM.CellStates.getNumberOfCellStates() != 2) {
+            disableBooleanRepresentation();
+        } else {
+            if (!booleanRuleField.isEnabled() && ruleField.isEnabled()) {
+                booleanRuleField.setEnabled(true);
+            }
+            outputBooleanRepresentationCheckBox.setEnabled(true);
         }
-        
-        if(polynomialRuleCheckBox.isSelected() && !polynomialRuleField.isEnabled() && ruleField.isEnabled()) {
+
+        if (polynomialRuleCheckBox.isSelected() && !polynomialRuleField.isEnabled() && ruleField.isEnabled()) {
             polynomialRuleField.setEnabled(true);
         }
 
         if (booleanRuleField.isEnabled()) {
             booleanRuleField.setText(ALGORITHM.Function.getSignificantBooleanRule());
         }
-        
-        if(polynomialRuleField.isEnabled()) {
+
+        if (polynomialRuleField.isEnabled()) {
             polynomialRuleField.setText(ALGORITHM.Function.getSignificantPolynomialRule());
         }
     }
 
-    private void generateImageButtonMouseClicked(java.awt.event.MouseEvent evt)//GEN-FIRST:event_generateImageButtonMouseClicked
-    {//GEN-HEADEREND:event_generateImageButtonMouseClicked
+    /**
+     * Disables the boolean rule field and corresponding checkbox
+     */
+    private void disableBooleanRepresentation() {
+        booleanRuleField.setEnabled(false);
+        booleanRuleField.setText("only for binary case");
+        outputBooleanRepresentationCheckBox.setEnabled(false);
+        outputBooleanRepresentationCheckBox.setSelected(false);
+    }
+
+    /**
+     * Called if the minNeighborhoodSizeField was changed, parses and checks the text and updates corresponding fields
+     */
+    private void minNeighborhoodSizeFieldChanged() {
+        try {
+            ALGORITHM.Neighborhood.setMinNeighborhoodSize(Integer.parseInt(minNeighborhoodSizeTextField.getText()));
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Please enter only numerals into the lower limit Neighborhood Size field", "Wrong number format", JOptionPane.ERROR_MESSAGE);
+            minNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMinNeighborhoodSize());
+            minNeighborhoodSizeTextField.requestFocusInWindow();
+            return;
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e, "Error setting lower limit neighborhood size", JOptionPane.ERROR_MESSAGE);
+            minNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMinNeighborhoodSize());
+            minNeighborhoodSizeTextField.requestFocusInWindow();
+            return;
+        }
+        checkNeighborhoodRuleFields();
+        updateNeededRessourcesFields();
+        updateRuleFields();
+        updateNeighborhoodFields();
+    }
+
+    /**
+     * Called if the maxNeighborhoodSizeField was changed, parses and checks the text and updates corresponding fields
+     */
+    private void maxNeighborhoodSizeFieldChanged() {
+        try {
+            ALGORITHM.Neighborhood.setMaxNeighborhoodSize(Integer.parseInt(maxNeighborhoodSizeTextField.getText()));
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Please enter only numerals into the upper limit Neighborhood Size field", "Wrong number format", JOptionPane.ERROR_MESSAGE);
+            maxNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMaxNeighborhoodSize());
+            maxNeighborhoodSizeTextField.requestFocusInWindow();
+            return;
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e, "Error setting upper limit neighborhood size", JOptionPane.ERROR_MESSAGE);
+            maxNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMaxNeighborhoodSize());
+            maxNeighborhoodSizeTextField.requestFocusInWindow();
+            return;
+        }
+        checkNeighborhoodRuleFields();
+        updateNeededRessourcesFields();
+        updateRuleFields();
+        updateNeighborhoodFields();
+    }
+
+    /**
+     * Called if the minSignificantNeighborhoodSizeField was changed, parses and checks the text and updates corresponding fields
+     */
+    private void minSignificantNeighborhoodSizeFieldChanged() {
+        try {
+            ALGORITHM.Neighborhood.setMinSignificantNeighborhoodSize(Integer.parseInt(minSignificantNeighborhoodSizeTextField.getText()));
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Please enter only numerals into the lower limit Significant Neighborhood Size field", "Wrong number format", JOptionPane.ERROR_MESSAGE);
+            minSignificantNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMinSignificantNeighborhoodSize());
+            minSignificantNeighborhoodSizeTextField.requestFocusInWindow();
+            return;
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e, "Error setting lower limit significant neighborhood size", JOptionPane.ERROR_MESSAGE);
+            minSignificantNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMinSignificantNeighborhoodSize());
+            minSignificantNeighborhoodSizeTextField.requestFocusInWindow();
+        }
+
+        if (!ALGORITHM.Iteration.isTestAllBalancedFunctions()) {
+            maxSignificantNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMinSignificantNeighborhoodSize());
+        }
+
+        checkNeighborhoodRuleFields();
+        updateNeededRessourcesFields();
+        updateRuleFields();
+        updateNeighborhoodFields();
+    }
+
+    /**
+     * Called if the maxSignificantNeighborhoodSizeField was changed, parses and checks the text and updates corresponding fields
+     */
+    private void maxSignificantNeighborhoodSizeFieldChanged() {
+        try {
+            ALGORITHM.Neighborhood.setMaxSignificantNeighborhoodSize(Integer.parseInt(maxSignificantNeighborhoodSizeTextField.getText()));
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Please enter only numerals into the upper limit Significant Neighborhood Size field", "Wrong number format", JOptionPane.ERROR_MESSAGE);
+            minSignificantNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMaxSignificantNeighborhoodSize());
+            minSignificantNeighborhoodSizeTextField.requestFocusInWindow();
+            return;
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e, "Error setting upper limit significant neighborhood size", JOptionPane.ERROR_MESSAGE);
+            minSignificantNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMaxSignificantNeighborhoodSize());
+            minSignificantNeighborhoodSizeTextField.requestFocusInWindow();
+        }
+
+
+        checkNeighborhoodRuleFields();
+        updateNeededRessourcesFields();
+        updateRuleFields();
+        updateNeighborhoodFields();
+    }
+
+    /**
+     * Checks neighborhood rule fields if they should be disabled when multiple neighborhoods should be tested automatically
+     */
+    private void checkNeighborhoodRuleFields() {
+        if (ALGORITHM.Neighborhood.getMinNeighborhoodSize() != ALGORITHM.Neighborhood.getMaxNeighborhoodSize() ||
+                ALGORITHM.Neighborhood.getMinSignificantNeighborhoodSize() != ALGORITHM.Neighborhood.getMaxSignificantNeighborhoodSize()) {
+            neighborhoodField.setEnabled(false);
+            neighborhoodField.setText("multiple neighborhoods");
+        } else {
+            neighborhoodField.setEnabled(true);
+            neighborhoodField.setText(ALGORITHM.Neighborhood.getSignificantNeighborhoodString());
+        }
+    }
+
+    /**
+     * Updates the estimated memory and time requirements for the calculation
+     */
+    private void updateNeededRessourcesFields() {
+        neededMemoryField.setText("" + ALGORITHM.InOutput.getNeededMemorySizeString(ALGORITHM.Iteration.getNeededMemorySize()));
+        neededTimeField.setText("" + ALGORITHM.Iteration.getTotalNeededTimeString());
+        ALGORITHM.Iteration.updateTotalSteps();
+        rulesToTestField.setText("" + ALGORITHM.Iteration.getTotalCalculationSteps().toString());
+    }
+
+    /**
+     * Parses and checks the cell state field and updates the corresponding fields and the function
+     */
+    private void checkCellStatesField() {
+        try {
+            if (ALGORITHM.CellStates.setNumberOfCellStatesRange(numberOfCellStatesField.getText().trim())) {
+                // TODO?
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e, "Error setting new cell state range", JOptionPane.ERROR_MESSAGE);
+            numberOfCellStatesField.setText(ALGORITHM.CellStates.getNumberOfCellStatesString());
+            numberOfCellStatesField.requestFocusInWindow();
+            return;
+        }
+        updateNeededRessourcesFields();
+    }
+
+    /**
+     * Load all data from fields into the core
+     * @throws java.lang.NumberFormatException 
+     * @throws java.lang.Exception
+     */
+    private void loadFromFields() throws NumberFormatException, Exception {
+        if (neighborhoodField.isEnabled()) {
+            ALGORITHM.Neighborhood.setSignificantNeighborhood(ALGORITHM.Neighborhood.parseSignificantNeighborhoodString(neighborhoodField.getText()));
+        }
+        ALGORITHM.CellStates.setNumberOfCellStatesRange(numberOfCellStatesField.getText());
+
+        ALGORITHM.Neighborhood.setMinMaxNeighborhoodSize(
+                Integer.parseInt(minSignificantNeighborhoodSizeTextField.getText()),
+                Integer.parseInt(maxSignificantNeighborhoodSizeTextField.getText()),
+                Integer.parseInt(minNeighborhoodSizeTextField.getText()),
+                Integer.parseInt(maxNeighborhoodSizeTextField.getText()));
+
+        if (ruleField.isEnabled()) {
+            ALGORITHM.Function.createSignificantFunction(new BigInteger(ruleField.getText()));
+        }
+    }
+
+    /**
+     * update the min/max neighborhood size fields
+     */
+    private void updateNeighborhoodFields() {
+        minNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMinNeighborhoodSize());
+        maxNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMaxNeighborhoodSize());
+        minSignificantNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMinSignificantNeighborhoodSize());
+        maxSignificantNeighborhoodSizeTextField.setText("" + ALGORITHM.Neighborhood.getMaxSignificantNeighborhoodSize());
+
+        if (ALGORITHM.Neighborhood.getMaxSignificantNeighborhoodSize() == 2 || ALGORITHM.Neighborhood.getMinSignificantNeighborhoodSize() == ALGORITHM.Neighborhood.getMaxNeighborhoodSize()) {
+            testAllNeighborhoodVariationsCheckBox.setEnabled(false);
+            testAllNeighborhoodVariationsCheckBox.setSelected(false);
+        } else {
+            testAllNeighborhoodVariationsCheckBox.setEnabled(true);
+        }
+    }
+
+    /**
+     * check and parse the neighborhood field, update the neighborhood after a change of the neighborhood field
+     */
+    private void neighborhoodFieldChanged() {
+        if (!neighborhoodField.isEnabled()) {
+            return;
+        }
+
+        try {
+            ALGORITHM.Neighborhood.setSignificantNeighborhood(ALGORITHM.Neighborhood.parseSignificantNeighborhoodString(neighborhoodField.getText()));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e, "Error setting neighborhood", JOptionPane.ERROR_MESSAGE);
+            neighborhoodField.setText(ALGORITHM.Neighborhood.getSignificantNeighborhoodString());
+            neighborhoodField.requestFocusInWindow();
+        }
+
+        updateRuleFields();
+        updateNeighborhoodFields();
+        updateNeededRessourcesFields();
+    }
+
+    /**
+     * Draw a new simulator image of the 1D Cellular automata
+     * @param cell_states number of cell states
+     * @param function function to draw
+     * @param neighborhood starting neighborhood
+     * @return Image as BufferedImage
+     * @throws java.lang.Exception if the neighborhood is out of range
+     */
+    private BufferedImage generateSimulatorBufferedImage(int cell_states, int[] function, int[] neighborhood) throws Exception {
+        int calculation_steps = Integer.parseInt(calculationStepsTextField.getText());
+        int calculation_width = Integer.parseInt(simulatorConfigurationSizeTextField.getText());
+        int zoom_slider_steps = zoomSlider.getValue();
+        String start_configuration_text = startConfigurationTextField.getText().trim();
+
+        int[] cellColor_R = new int[cell_states];
+        int[] cellColor_G = new int[cell_states];
+        int[] cellColor_B = new int[cell_states];
+        // black, white, red, green, blue
+        switch (cell_states) {
+            case 5:
+                cellColor_R[4] = 64;
+                cellColor_G[4] = 64;
+                cellColor_B[4] = 255;
+            case 4:
+                cellColor_R[3] = 64;
+                cellColor_G[3] = 255;
+                cellColor_B[3] = 64;
+            case 3:
+                cellColor_R[2] = 255;
+                cellColor_G[2] = 64;
+                cellColor_B[2] = 64;
+            case 2:
+                cellColor_R[1] = 255;
+                cellColor_G[1] = 255;
+                cellColor_B[1] = 255;
+            default:
+                cellColor_R[0] = 0;
+                cellColor_G[0] = 0;
+                cellColor_B[0] = 0;
+                break;
+        }
+
+        String conf[] = start_configuration_text.split("[, ]+");
+
+        int total_size = calculation_width * calculation_steps;
+        int[] data = new int[total_size];
+        int[] output = new int[total_size * 3 * zoom_slider_steps * zoom_slider_steps];
+
+        for (int i = 0; i < calculation_width; i++) {
+            int value = Integer.parseInt(conf[i]);
+            if (value < 0 || value >= cell_states) {
+                throw new Exception("Start configuration cell state out of range [" + conf[i] + "]");
+            }
+            data[i] = value;
+        }
+
+        for (int y = 1; y < calculation_steps; y++) {
+            int last_index = (y - 1) * calculation_width;
+            int index = y * calculation_width;
+            for (int x = 0; x < calculation_width; x++) {
+                int[] n = new int[neighborhood.length];
+
+                for (int i = 0; i < n.length; i++) {
+                    int t = x + neighborhood[i];
+                    if (t < 0) {
+                        t += calculation_width;
+                    } else if (t >= calculation_width) {
+                        t -= calculation_width;
+                    }
+                    n[i] = data[last_index + t];
+                }
+                data[index + x] = ALGORITHM.Misc.getNeighborhoodFunction(n, function, cell_states);
+            }
+        }
+
+        for (int y = 0; y < calculation_steps; y++) {
+            int index = 3 * y * calculation_width * zoom_slider_steps * zoom_slider_steps;
+            int data_index = y * calculation_width;
+
+            for (int x = 0; x < calculation_width; x++) {
+                int new_value_R = cellColor_R[data[data_index + x]];
+                int new_value_G = cellColor_G[data[data_index + x]];
+                int new_value_B = cellColor_B[data[data_index + x]];
+                for (int i = 0; i < zoom_slider_steps; i++) {
+                    for (int j = 0; j < zoom_slider_steps; j++) {
+                        output[3 * zoom_slider_steps * x + 3 * j + i * 3 * zoom_slider_steps * calculation_width + index] = new_value_R;
+                        output[3 * zoom_slider_steps * x + 3 * j + 1 + i * 3 * zoom_slider_steps * calculation_width + index] = new_value_G;
+                        output[3 * zoom_slider_steps * x + 3 * j + 2 + i * 3 * zoom_slider_steps * calculation_width + index] = new_value_B;
+                    }
+                }
+            }
+        }
+
+        BufferedImage image = new BufferedImage(calculation_width * zoom_slider_steps, calculation_steps * zoom_slider_steps, BufferedImage.TYPE_INT_RGB);
+        WritableRaster wr = image.getRaster();
+        wr.setPixels(0, 0, calculation_width * zoom_slider_steps, calculation_steps * zoom_slider_steps, output);
+
+        return image;
+    }
+
+    /**
+     * Generate new image
+     * @throws java.lang.Exception
+     */
+    private void updateCurrentSimulatorImage() throws Exception {
+        simulationImage = generateSimulatorBufferedImage(ALGORITHM.CellStates.getMaxNumberOfCellStates(), ALGORITHM.Function.getSignificantFunctionArray(), ALGORITHM.Neighborhood.getSignificantNeighborhoodArray());
+    }
+
+    /**
+     * Draw a new frame of the 1D cellular automata simulator
+     */
+    private void updateSimulatorFrame() {
+        if (simulatorFrame == null) {
+            simulatorIRC = new ImageRenderComponent(simulationImage);
+            simulatorIRC.setOpaque(true);
+
+            simulatorFrame = new JFrame("Simulator Output");
+            simulatorFrame.setAlwaysOnTop(true);
+            simulatorFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+            simulatorFrame.setLocation(200, 100);
+            simulatorFrame.add("Center", new JScrollPane(simulatorIRC));
+        } else {
+            simulatorIRC.setImage(simulationImage);
+            simulatorIRC.validate();
+            simulatorIRC.repaint();
+            simulatorFrame.validate();
+            simulatorFrame.repaint();
+        }
+        simulatorFrame.setSize(531, 551);//calculation_width * zoom_slider_steps, calculation_steps * zoom_slider_steps);
+        simulatorFrame.setVisible(true);
+    }
+
+    /**
+     * deactivate GUI controls until the run is complete or stopped
+     */
+    private void prepareCalculation() {
+        stopCalculationButton.setEnabled(true);
+        startCalculationButton.setEnabled(false);
+
+        minNeighborhoodSizeWasActivated = minNeighborhoodSizeTextField.isEnabled();
+        minSignificantNeighborhoodSizeWasActivated = minSignificantNeighborhoodSizeTextField.isEnabled();
+        maxNeighborhoodSizeWasActivated = minNeighborhoodSizeTextField.isEnabled();
+        maxSignificantNeighborhoodSizeWasActivated = minSignificantNeighborhoodSizeTextField.isEnabled();
+        neighborhoodWasActivated = neighborhoodField.isEnabled();
+        ruleNumberWasActivated = ruleField.isEnabled();
+        minNeighborhoodSizeTextField.setEnabled(false);
+        minSignificantNeighborhoodSizeTextField.setEnabled(false);
+        maxNeighborhoodSizeTextField.setEnabled(false);
+        maxSignificantNeighborhoodSizeTextField.setEnabled(false);
+        neighborhoodField.setEnabled(false);
+        ruleField.setEnabled(false);
+        booleanRuleField.setEnabled(false);
+        numberOfCellStatesField.setEnabled(false);
+
+        testAllNeighborhoodVariationsCheckBox.setEnabled(false);
+        testAllNeighborhoodPermutationsCheckBox.setEnabled(false);
+        testAllBalancedRulesCheckBox.setEnabled(false);
+
+        startSimulationButton.setEnabled(false);
+
+        outputAllRadioButton.setEnabled(false);
+        outputSurjectiveRadioButton.setEnabled(false);
+        outputOnlyInjectiveRadioButton.setEnabled(false);
+        addToDatabaseCheckBox.setEnabled(false);
+        generateGraphCheckBox.setEnabled(false);
+        simulatorOutputCheckBox.setEnabled(false);
+        checkDatabaseDuplicatesCheckBox.setEnabled(false);
+        useFastCPPPluginCheckBox.setEnabled(false);
+        endProgramButton.setEnabled(false);
+        saveEndProgramButton.setEnabled(false);
+        polynomialRuleCheckBox.setEnabled(false);
+
+        outputBooleanRepresentationCheckBox.setEnabled(false);
+        outputPolynomialRepresentationCheckBox.setEnabled(false);
+
+        neededTimeLabel.setText("Remaining calculation time");
+        // ... calculation, progress bar, extra thread?
+
+        // TODO: pruefen ob 'generate graph' aktiviert wurde und auf Problemgroesse testen -> groesser als 5 kaum sinnvoll (VIZ kann es nicht) => User fragen.
+
+
+        progressBar.setMaximum(1000);
+        progressBar.setValue(0);
+
+        try {
+            ALGORITHM.Neighborhood.initializeMinimalNeighborhoodSizeValue();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e, "INTERNAL ERROR when initializing minimal neighborhood", JOptionPane.ERROR_MESSAGE);
+            clearUpAfterCalculation();
+            return;
+        }
+        try {
+            if (!(new File("graphs")).exists()) {
+                if (!(new File("graphs")).mkdir()) {
+                    throw new Exception("Could not create directory 'graphs'");
+                }
+            }
+            if (!(new File("simulations")).exists()) {
+                if (!(new File("simulations")).mkdir()) {
+                    throw new Exception("Could not create directory 'simulations'");
+                }
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e, "INTERNAL ERROR when creating directory", JOptionPane.ERROR_MESSAGE);
+            clearUpAfterCalculation();
+            return;
+        }
+        ALGORITHM.Neighborhood.initNeighborhoodPermutations();
+        ALGORITHM.Neighborhood.initNeighborhoodVariations();
+    }
+
+    /**
+     * reactivate GUI controls after the calculation is done or stopped
+     */
+    public void clearUpAfterCalculation() {
+        results.fireTableStructureChanged(); // todo?
+
+
+        stopCalculationButton.setEnabled(false);
+        startCalculationButton.setEnabled(true);
+        minNeighborhoodSizeTextField.setEnabled(minNeighborhoodSizeWasActivated);
+        minSignificantNeighborhoodSizeTextField.setEnabled(minSignificantNeighborhoodSizeWasActivated);
+        maxNeighborhoodSizeTextField.setEnabled(maxNeighborhoodSizeWasActivated);
+        maxSignificantNeighborhoodSizeTextField.setEnabled(maxSignificantNeighborhoodSizeWasActivated);
+        neighborhoodField.setEnabled(neighborhoodWasActivated);
+        ruleField.setEnabled(ruleNumberWasActivated);
+        polynomialRuleCheckBox.setEnabled(ruleNumberWasActivated);
+
+        if (ALGORITHM.CellStates.getNumberOfCellStates() != 2) {
+            disableBooleanRepresentation();
+        } else {
+            if (!booleanRuleField.isEnabled()) {
+                booleanRuleField.setEnabled(ruleNumberWasActivated);
+            }
+            outputBooleanRepresentationCheckBox.setEnabled(true);
+        }
+        numberOfCellStatesField.setEnabled(true);
+
+        testAllNeighborhoodPermutationsCheckBox.setEnabled(true);
+        testAllBalancedRulesCheckBox.setEnabled(true);
+
+        if (ALGORITHM.Neighborhood.getMinSignificantNeighborhoodSize() == ALGORITHM.Neighborhood.getMaxNeighborhoodSize()) {
+            testAllNeighborhoodVariationsCheckBox.setEnabled(false);
+        } else {
+            testAllNeighborhoodVariationsCheckBox.setEnabled(true);
+        }
+
+
+        outputAllRadioButton.setEnabled(true);
+        outputSurjectiveRadioButton.setEnabled(true);
+        outputOnlyInjectiveRadioButton.setEnabled(true);
+        if (!useFastCPPPluginCheckBox.isSelected()) {
+            generateGraphCheckBox.setEnabled(true);
+            simulatorOutputCheckBox.setEnabled(true);
+            if ((!generateGraphCheckBox.isSelected()) && (!simulatorOutputCheckBox.isSelected())) {
+                useFastCPPPluginCheckBox.setEnabled(true);
+            }
+        } else {
+            useFastCPPPluginCheckBox.setEnabled(true);
+        }
+
+        if (testAllNeighborhoodVariationsCheckBox.isSelected() || testAllNeighborhoodPermutationsCheckBox.isSelected() || testAllBalancedRulesCheckBox.isSelected()) {
+            startSimulationButton.setEnabled(false);
+        } else {
+            startSimulationButton.setEnabled(true);
+        }
+
+        addToDatabaseCheckBox.setEnabled(true);
+        checkDatabaseDuplicatesCheckBox.setEnabled(true);
+
+
+        outputPolynomialRepresentationCheckBox.setEnabled(true);
+
+        endProgramButton.setEnabled(true);
+        saveEndProgramButton.setEnabled(true);
+
+        neededTimeLabel.setText("Needed calculation time");
+        updateNeededRessourcesFields();
+
+        progressBar.setValue(1000);
+    }
+
+    /**
+     * load data from a BufferedReader into the results database
+     * @param p A BufferedReader device, e.g. a file
+     * @throws java.lang.NumberFormatException Error parsing an integer field
+     * @throws java.io.IOException Error reading from BufferedReader
+     */
+    private void loadResultsIntoDatabase(BufferedReader p) throws NumberFormatException, IOException {
+        results.datas.clear();
+        String t;
+        while ((t = p.readLine()) != null) {
+            Object[] object_row = ALGORITHM.InOutput.parseParametersAsString(t);
+            object_row[ResultsTable.GRAPH_INDEX] = new Boolean((new File(ALGORITHM.InOutput.getImageFileName(object_row) + ".viz")).exists());
+            object_row[ResultsTable.IMAGE_INDEX] = new Boolean((new File(ALGORITHM.InOutput.getImageFileName(object_row) + ".viz.png")).exists());
+            object_row[ResultsTable.SIMULATOR_INDEX] = new Boolean((new File(ALGORITHM.InOutput.getSimulationFileName(object_row))).exists());
+
+            results.datas.add(object_row);
+            results.fireTableDataChanged();
+        }
+    }
+
+    /**
+     * Exit the Application
+     * @param evt unused
+     */
+    private void exitForm(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_exitForm
+        exitProgram();
+    }//GEN-LAST:event_exitForm
+
+    /**
+     * Exit procedure
+     */
+    private void exitProgram() {
+        setVisible(false);
+        dispose();
+        System.exit(0);
+    }
+
+    /**
+     * Generate simulator images from the results that were selected in the result database
+     * @param evt unused
+     */
+    private void generateImageButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_generateImageButtonMouseClicked
         int[] list = resultTable.getSelectedRows();
+        for (int i = 0; i < list.length; i++) {
+            list[i] = sorter.modelIndex(list[i]);
+        }
+
         Vector<Integer> graph_list = new Vector<Integer>();
 
         for (int i = 0; i < list.length; i++) {
@@ -1026,408 +1873,74 @@ public class Main extends java.awt.Frame {
                 return;
             }
         }
-        String calling_string = "dot/dot -Tpng -O ";
+        //String calling_string = System.getProperty("user.dir") + "\\dot\\dot -Tpng -o";
+        String calling_string = "dot -Tpng -o";
         Runtime rt = Runtime.getRuntime();
         try {
             for (int i = 0; i < graph_list.size(); i++) {
-                String file_name = ALGORITHM.Function.getImageFileName(results.getRow(graph_list.get(i))) + ".viz";
+                String file_name = ALGORITHM.InOutput.getImageFileName(results.getRow(graph_list.get(i))) + ".viz";
                 if (((new File(file_name)).length() / 1024) > 64) {
                     if (JOptionPane.showConfirmDialog(null, "The graph file (" + file_name + ") is larger than 64kb (" + ((new File(file_name)).length() / 1024) + "kb). 'DOT' might need a long time to generate the image.\n\nContinue?", "Large graph warning", JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE) == 1) {
                         break;
                     }
                 }
-                Process p = rt.exec(calling_string + "\"" + file_name + "\"");
+                System.out.println("CALL " + calling_string + file_name + ".png " + file_name);
+                Process p = rt.exec(calling_string + file_name + ".png " + file_name);
                 InputStream in = p.getInputStream();
                 OutputStream out = p.getOutputStream();
                 InputStream err = p.getErrorStream();
                 int x;
 
                 System.out.print("InputStream in: ");
-                while ((x = in.read())!= -1) {
-                    System.out.print(Character.valueOf((char)x)); 
-                }               
+                while ((x = in.read()) != -1) {
+                    System.out.print(Character.valueOf((char) x));
+                }
                 System.out.println();
                 System.out.print("InputStream err: ");
-                while ((x = err.read())!= -1) {
-                    System.out.print(Character.valueOf((char)x)); 
-                }                
-                System.out.println();                
+                while ((x = err.read()) != -1) {
+                    System.out.print(Character.valueOf((char) x));
+                }
+                System.out.println();
 
                 int return_value = p.waitFor();
                 System.out.println("Return value: " + return_value);
                 p.destroy();
             }
         } catch (Exception exc) {
-            JOptionPane.showMessageDialog(this, "Error when calling the 'dot' program. Ensure that the tool is in the directory " + System.getProperty("user.dir") + "/dot", "Error generating graphs", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error when calling the 'dot' program. Ensure that the tool is in the directory " + System.getProperty("user.dir") + "\\dot", "Error generating graphs", JOptionPane.ERROR_MESSAGE);
             return;
         }
         for (int i = 0; i < graph_list.size(); i++) {
-            String file_name = ALGORITHM.Function.getImageFileName(results.getRow(graph_list.get(i))) + ".viz.png";
+            String file_name = ALGORITHM.InOutput.getImageFileName(results.getRow(graph_list.get(i))) + ".viz.png";
             if ((new File(file_name)).exists()) {
                 results.setHasImage(graph_list.get(i));
             }
             results.fireTableRowsUpdated(graph_list.get(i), graph_list.get(i));
-        }        
+        }
+        if (graph_list.size() == 1) {
+// TODO select single row
+        }
     }//GEN-LAST:event_generateImageButtonMouseClicked
 
-    private void eraseAllEntriesButtonMouseClicked(java.awt.event.MouseEvent evt)//GEN-FIRST:event_eraseAllEntriesButtonMouseClicked
-    {//GEN-HEADEREND:event_eraseAllEntriesButtonMouseClicked
+    /**
+     * Clears all results from the database
+     * @param evt unused
+     */
+    private void eraseAllEntriesButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_eraseAllEntriesButtonMouseClicked
         results.datas.clear();
         results.fireTableDataChanged();
     }//GEN-LAST:event_eraseAllEntriesButtonMouseClicked
 
-    private void useFastCPPPluginCheckBoxItemStateChanged(java.awt.event.ItemEvent evt)//GEN-FIRST:event_useFastCPPPluginCheckBoxItemStateChanged
-    {//GEN-HEADEREND:event_useFastCPPPluginCheckBoxItemStateChanged
-        if (useFastCPPPluginCheckBox.isSelected()) {
-            generateGraphCheckBox.setSelected(false);
-            generateGraphCheckBox.setEnabled(false);
-        } else {
-            generateGraphCheckBox.setEnabled(true);
-        }
-    }//GEN-LAST:event_useFastCPPPluginCheckBoxItemStateChanged
-
-    private void allNeighborhoodRuleTestRadioButtonItemStateChanged(java.awt.event.ItemEvent evt)//GEN-FIRST:event_allNeighborhoodRuleTestRadioButtonItemStateChanged
-    {//GEN-HEADEREND:event_allNeighborhoodRuleTestRadioButtonItemStateChanged
-        if (allNeighborhoodRuleTestRadioButton.isSelected()) {
-            ALGORITHM.Neighborhood.setAllowDisorderedNeighborhoodPermutations(true);
-            if(testAllNeighborhoodsRadioButton.isSelected()) {
-                testAllNeighborhoodSizesRadioButton.doClick();
-            }
-            testAllNeighborhoodsRadioButton.setEnabled(false);
-            
-        } else {
-            ALGORITHM.Neighborhood.setAllowDisorderedNeighborhoodPermutations(false);
-            testAllNeighborhoodsRadioButton.setEnabled(true);
-        }
-        updateNeededFields();
-    }//GEN-LAST:event_allNeighborhoodRuleTestRadioButtonItemStateChanged
-
-    private void allRuleTestRadioButtonItemStateChanged(java.awt.event.ItemEvent evt)//GEN-FIRST:event_allRuleTestRadioButtonItemStateChanged
-    {//GEN-HEADEREND:event_allRuleTestRadioButtonItemStateChanged
-        if (allRuleTestRadioButton.isSelected()) {
-            ruleField.setText("all");
-            ruleField.setEnabled(false);
-            if (ALGORITHM.Function.getNumberOfCellStates() != 2) {
-               booleanRuleField.setText("only for binary case");            
-            } else {
-                booleanRuleField.setText("all");
-            }
-            booleanRuleField.setEnabled(false);
-            polynomialRuleField.setText("all");
-            polynomialRuleField.setEnabled(false);
-            polynomialRuleCheckBox.setSelected(false);
-            testAllNeighborhoodsRadioButton.setEnabled(true);
-        } else {
-                ruleField.setEnabled(true);
-            if (ALGORITHM.Function.getNumberOfCellStates() != 2) {
-               booleanRuleField.setEnabled(false);
-               booleanRuleField.setText("only for binary case");
-           } else if (!booleanRuleField.isEnabled() && ruleField.isEnabled()) {
-               booleanRuleField.setEnabled(true);
-          }
-            if(polynomialRuleCheckBox.isSelected()) {
-                polynomialRuleField.setEnabled(true);
-            }
-
-            updateRuleFields();
-        }
-        ALGORITHM.Function.setTestAllRules(allRuleTestRadioButton.isSelected());
-        updateNeededFields();
-    }//GEN-LAST:event_allRuleTestRadioButtonItemStateChanged
-
-    private void testAllNeighborhoodsRadioButtonItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_testAllNeighborhoodsRadioButtonItemStateChanged
-        if (testAllNeighborhoodsRadioButton.isSelected()) {
-            ALGORITHM.Neighborhood.setTestAllNeighborhoods(true);
-
-            neighborhoodField.setText("all");
-            neighborhoodField.setEnabled(false);
-
-            neighborhoodSizeField.setEnabled(true);
-            significantNeighborhoodSizeField.setEnabled(false);
-
-            neighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getNeighborhoodSize());
-            significantNeighborhoodSizeField.setText("all");
-            updateNeededFields();            
-            allRuleTestRadioButton.doClick();
-            
-            allNeighborhoodRuleTestRadioButton.setEnabled(false); //? why?~~~~
-            singleRuleTestRadioButton.setEnabled(false);
-        } else {
-            allNeighborhoodRuleTestRadioButton.setEnabled(true);
-            singleRuleTestRadioButton.setEnabled(true);
-        }
-    }//GEN-LAST:event_testAllNeighborhoodsRadioButtonItemStateChanged
-
-    private void testAllNeighborhoodSizesRadioButtonItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_testAllNeighborhoodSizesRadioButtonItemStateChanged
-        if (testAllNeighborhoodSizesRadioButton.isSelected()) {
-            ALGORITHM.Neighborhood.setTestAllNeighborhoodSizesAndPermutations(true);
-
-            neighborhoodField.setText("all");
-            neighborhoodField.setEnabled(false);
-
-            neighborhoodSizeField.setEnabled(true);
-            significantNeighborhoodSizeField.setEnabled(true);
-
-            neighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getNeighborhoodSize());
-            significantNeighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getSignificantNeighborhoodSize());
-            updateNeededFields();        }
-    }//GEN-LAST:event_testAllNeighborhoodSizesRadioButtonItemStateChanged
-
-    private void testAllNeighborhoodVariationsRadioButtonItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_testAllNeighborhoodVariationsRadioButtonItemStateChanged
-        if (testAllNeighborhoodVariationsRadioButton.isSelected()) {
-            ALGORITHM.Neighborhood.setTestAllNeighborhoodSizesAndPermutations(false);
-            ALGORITHM.Neighborhood.setTestAllNeighborhoodPermutations(true);
-
-            neighborhoodField.setText("all");
-            neighborhoodField.setEnabled(false);
-
-            neighborhoodSizeField.setEnabled(true);
-            significantNeighborhoodSizeField.setEnabled(true);
-
-            neighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getNeighborhoodSize());
-            significantNeighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getSignificantNeighborhoodSize());
-            updateNeededFields();
-        }
-}//GEN-LAST:event_testAllNeighborhoodVariationsRadioButtonItemStateChanged
-
-    private void testSingleNeighborhoodRadioButtonItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_testSingleNeighborhoodRadioButtonItemStateChanged
-        if (testSingleNeighborhoodRadioButton.isSelected()) {
-            ALGORITHM.Function.setSingleTestCase(true);
-
-            neighborhoodField.setEnabled(true);
-
-            neighborhoodSizeField.setEnabled(false);
-            significantNeighborhoodSizeField.setEnabled(false);
-
-            neighborhoodField.setText(ALGORITHM.Neighborhood.getNeighborhoodString());
-            significantNeighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getSignificantNeighborhoodSize());
-            updateNeededFields();
-        }
-    }//GEN-LAST:event_testSingleNeighborhoodRadioButtonItemStateChanged
-
-    private void ruleFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_ruleFieldFocusLost
-        // TODO: nicht erlauben falls mehrere cell states oder mehrere significante neighborhoods eingestellt sind
-        checkRuleField();
-
-        updateRuleFields();
-    }//GEN-LAST:event_ruleFieldFocusLost
-
-    private void neighborhoodSizeFieldChanged() {
-        try {
-            int result = ALGORITHM.Neighborhood.parseStandardNeighborhoodRange(neighborhoodSizeField.getText());
-            //Integer.parseInt(significantNeighborhoodSizeField.getText()), Integer.parseInt(neighborhoodSizeField.getText()));
-            switch (result) {
-                case 0:
-                    break;
-                case -1:
-                    JOptionPane.showMessageDialog(this, "Invalid neighborhood size range, the lower limit of the neighborhood size must be smaller than the upper limit (e.g. '3-5').", "Invalid neighborhood size range", JOptionPane.ERROR_MESSAGE);
-                    break;
-                case -2:
-                    JOptionPane.showMessageDialog(this, "Neighborhood size is too large, a calculation would need too much memory.", "Neighborhood size too large", JOptionPane.ERROR_MESSAGE);
-                    break;
-                case -3:
-                    JOptionPane.showMessageDialog(this, "Invalid neighborhood size range, you need to enter either one entry or a lower and upper limit for the neighborhood size.", "Invalid neighborhood size range", JOptionPane.ERROR_MESSAGE);
-                    break;
-                case -4:
-                    JOptionPane.showMessageDialog(this, "INTERNAL ERROR, significant neighborhood size too small", "INTERNAL ERROR", JOptionPane.ERROR_MESSAGE);
-                    break;
-                case -5:
-                    JOptionPane.showMessageDialog(this, "Neighborhood Size can only be as small as Significant Neighborhood Size", "Neighborhood Size too small", JOptionPane.ERROR_MESSAGE);
-                    break;
-                }
-            if (result != 0) {
-                if (significantNeighborhoodSizeField.getText().compareTo("all") != 0) {
-                    significantNeighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getSignificantNeighborhoodSize());
-                }
-                neighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getNeighborhoodSize());
-                neighborhoodSizeField.requestFocusInWindow();
-            }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Please enter only numerals into the Neighborhood Size field", "Wrong number format", JOptionPane.ERROR_MESSAGE);
-            neighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getNeighborhoodSize());
-            if (significantNeighborhoodSizeField.getText().compareTo("all") != 0) {
-                significantNeighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getSignificantNeighborhoodSize());
-            }
-            neighborhoodSizeField.requestFocusInWindow();
-            return;
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, e, "INTERNAL ERROR setting neighborhood", JOptionPane.ERROR_MESSAGE);
-        }
-
-        updateNeededFields();        
-    }
-    
-    private void neighborhoodSizeFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_neighborhoodSizeFieldFocusLost
-        neighborhoodSizeFieldChanged();
-    }//GEN-LAST:event_neighborhoodSizeFieldFocusLost
-
-    private void significantNeighborhoodSizeFieldChanged() {
-        try {
-            int result = ALGORITHM.Neighborhood.createStandardNeighborhoodRange(Integer.parseInt(significantNeighborhoodSizeField.getText()), Integer.parseInt(neighborhoodSizeField.getText()));
-            switch (result) {
-                case 0:
-                    break;
-                case -1:
-                    JOptionPane.showMessageDialog(this, "Please enter a Significant Neighborhood Size larger than 2.\n The Significant Neighborhood Size is defined by the the number of neighborhood locations that the rule uses", "Significant Neighborhood Size out of range", JOptionPane.ERROR_MESSAGE);
-                    break;
-                case -2:
-                    JOptionPane.showMessageDialog(this, "Significant Neighborhood Size can only be as large as Neighborhood Size", "Significant Neighborhood Size too large", JOptionPane.ERROR_MESSAGE);
-                    break;
-                }
-            if (result != 0) {
-                if (neighborhoodSizeField.getText().compareTo("all") != 0) {
-                    neighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getNeighborhoodSize());
-                }
-                significantNeighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getSignificantNeighborhoodSize());
-                significantNeighborhoodSizeField.requestFocusInWindow();
-            }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Please enter only numerals into the Significant Neighborhood Size field", "Wrong number format", JOptionPane.ERROR_MESSAGE);
-            if (neighborhoodSizeField.getText().compareTo("all") != 0) {
-                neighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getNeighborhoodSize());
-            }
-            significantNeighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getSignificantNeighborhoodSize());
-            significantNeighborhoodSizeField.requestFocusInWindow();
-            return;
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, e, "INTERNAL ERROR setting significant neighborhood", JOptionPane.ERROR_MESSAGE);
-        }
-
-        updateNeededFields();
-        updateRuleFields();
-        neighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getNeighborhoodSize());
-    }
-    
-    private void significantNeighborhoodSizeFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_significantNeighborhoodSizeFieldFocusLost
-        significantNeighborhoodSizeFieldChanged();
-    }//GEN-LAST:event_significantNeighborhoodSizeFieldFocusLost
-
-    private void updateNeededFields() {
-        neededMemoryField.setText("" + ALGORITHM.Function.getNeededMemorySizeString());
-        neededTimeField.setText("" + ALGORITHM.Function.getTotalNeededTimeString());
-        ALGORITHM.Function.updateTotalSteps();
-        rulesToTestField.setText("" + ALGORITHM.Function.getTotalCalculationSteps().toString());                
-    }
-    
-    private void checkCellStatesField() {
-        try {
-            int result = ALGORITHM.Function.setNumberOfCellStatesRange(numberOfCellStatesField.getText());
-            switch (result) {
-                case -1:
-                    JOptionPane.showMessageDialog(this, "Number of Cell States out of range.\n" +
-                            "Please use a value larger than " + ALGORITHM.Function.MIN_NUMBER_OF_CELL_STATES + " and when specifing a range put the lower limit first (e.g. '3-5' instead of '5-3').", "Number of Cell States out of range", JOptionPane.ERROR_MESSAGE);
-                    break;
-                case -2:
-                    JOptionPane.showMessageDialog(this, "Number of Cell States out of range [out of memory]\n" +
-                            "Please use a value smaller than or equal " + ALGORITHM.Function.calculateMaxNumberOfCellStates() + ".", "Number of Cell States out of range", JOptionPane.ERROR_MESSAGE);
-                    break;
-                case -3:
-                    JOptionPane.showMessageDialog(this, "Wrong number of entries in the Cell States field.\n" +
-                            "Please enter either a single value or two values parted by a '-' (e.g. '2-4').",
-                            "Invalid number of entries",
-                            JOptionPane.ERROR_MESSAGE);
-                    break;
-            }
-            if (result != 0) {
-                numberOfCellStatesField.setText(ALGORITHM.Function.getNumberOfCellStatesString());
-                numberOfCellStatesField.requestFocusInWindow();
-                return;
-            }
-            updateNeededFields();
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Please enter only numerals into the Number of Cell States field",
-                    "Wrong number format",
-                    JOptionPane.ERROR_MESSAGE);
-
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, e, "INTERNAL ERROR creating function with new cell state range", JOptionPane.ERROR_MESSAGE);
-        }
-
-
-    }
-
-    private void numberOfCellStatesFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_numberOfCellStatesFieldFocusLost
-
-        checkCellStatesField();
-
-        updateRuleFields();
-        
-    }//GEN-LAST:event_numberOfCellStatesFieldFocusLost
-
-    private void loadFromFields() {
-        try {
-            if (neighborhoodField.isEnabled()) {
-                ALGORITHM.Neighborhood.setSignificantNeighborhood(ALGORITHM.Neighborhood.parseSignificantNeighborhoodString(neighborhoodField.getText()));
-            }
-            if (numberOfCellStatesField.isEnabled()) {
-                ALGORITHM.Function.setNumberOfCellStatesRange(numberOfCellStatesField.getText());
-            }
-            if (significantNeighborhoodSizeField.isEnabled()) {
-                ALGORITHM.Neighborhood.createStandardNeighborhoodRange(Integer.parseInt(significantNeighborhoodSizeField.getText()), Integer.parseInt(neighborhoodSizeField.getText()));
-            }
-            if (neighborhoodSizeField.isEnabled()) {
-                ALGORITHM.Neighborhood.parseStandardNeighborhoodRange(neighborhoodSizeField.getText());
-            }
-            if (ruleField.isEnabled()) {
-                ALGORITHM.Function.createSignificantFunction(new BigInteger(ruleField.getText()));
-            }
-        } catch (Exception e) {
-            System.out.println("Error loading from fields: " + e);
-        }
-    }
-
-    private void neighborhoodFieldChanged() {
-        try {
-            int result = ALGORITHM.Neighborhood.setSignificantNeighborhood(ALGORITHM.Neighborhood.parseSignificantNeighborhoodString(neighborhoodField.getText()));
-            switch (result) {
-                case 0:
-                    break;
-                case -1:
-                    JOptionPane.showMessageDialog(this, "Please enter a significant neighborhood size larger than 2.", "Significant Neighborhood Size out of range", JOptionPane.ERROR_MESSAGE);
-                    break;
-                case -2:
-                    JOptionPane.showMessageDialog(this, "Please check the order of your neighborhood", "Wrong order", JOptionPane.WARNING_MESSAGE);
-//TODO evtl zulassen, nachfragen und selber ordnen
-                    break;
-                case -3:
-                    JOptionPane.showMessageDialog(this, "Neighborhood out of range, you need at least " + ALGORITHM.Neighborhood.MIN_NEIGHBORHOOD_SIZE + " different entries and\n at most a difference of " + (ALGORITHM.Function.calculateMaxNeighborhoodSize() - 1) + " between first and last entry with the current number of cell states (e.g. '0, 1, 7' for a distance of 7).", "Neighborhood out of range", JOptionPane.WARNING_MESSAGE);
-                    break;
-                default:
-                    JOptionPane.showMessageDialog(this, "INTERNAL ERROR", "Error Assigning Neighborhood", JOptionPane.ERROR_MESSAGE);
-                    break;
-                }
-            if (result != 0) {
-                neighborhoodField.setText(ALGORITHM.Neighborhood.getNeighborhoodString());
-                neighborhoodField.requestFocusInWindow();
-                return;
-            }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Please enter only numerals seperated by commas into the Neighborhood field (" + e + ")", "Wrong number format", JOptionPane.ERROR_MESSAGE);
-            neighborhoodField.setText(ALGORITHM.Neighborhood.getNeighborhoodString());
-            neighborhoodField.requestFocusInWindow();
-            return;
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, e, "INTERNAL ERROR when assigning the neighborhood (" + e + ")", JOptionPane.ERROR_MESSAGE);
-        }
-
-        updateRuleFields();
-
-        if (neighborhoodSizeField.getText().compareTo("all") != 0) {
-            neighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getNeighborhoodSize());
-        }
-        if (significantNeighborhoodSizeField.getText().compareTo("all") != 0) {
-            significantNeighborhoodSizeField.setText("" + ALGORITHM.Neighborhood.getSignificantNeighborhoodSize());
-        }
-        updateNeededFields();        
-    }
-    
-    private void neighborhoodFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_neighborhoodFieldFocusLost
-        neighborhoodFieldChanged();
-    }//GEN-LAST:event_neighborhoodFieldFocusLost
-
-    private void showImageButtonMouseClicked(java.awt.event.MouseEvent evt)//GEN-FIRST:event_showImageButtonMouseClicked
-    {//GEN-HEADEREND:event_showImageButtonMouseClicked
+    /**
+     * Displays the image corresponding to the selected rows of the results database
+     * @param evt unused
+     */
+    private void showImageButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_showImageButtonMouseClicked
         int[] list = resultTable.getSelectedRows();
+        for (int i = 0; i < list.length; i++) {
+            list[i] = sorter.modelIndex(list[i]);
+        }
+
         Vector<Integer> graph_list = new Vector<Integer>();
         for (int i = 0; i < list.length; i++) {
             if (results.hasImage(list[i])) {
@@ -1447,180 +1960,33 @@ public class Main extends java.awt.Frame {
             }
         }
         for (int i = 0; i < graph_list.size(); i++) {
-            String file_name = ALGORITHM.Function.getImageFileName(results.getRow(graph_list.get(i))) + ".viz.png";
+            String file_name = ALGORITHM.InOutput.getImageFileName(results.getRow(graph_list.get(i))) + ".viz.png";
             try {
                 BufferedImage image = ImageIO.read(new File(file_name));
                 ImageRenderComponent irc = new ImageRenderComponent(image);
                 irc.setOpaque(true);  // for use as a content pane
-                JFrame f = new JFrame();
-                f.setTitle(file_name);
+
+                JFrame f = new JFrame("DeBruijn graph output '" + file_name + "'");
+
                 f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                f.setContentPane(irc);
-                f.setSize(400, 400);
-                f.setLocation(200, 200);
+                //f.setContentPane(irc);
+                f.add("Center", new JScrollPane(irc));
+                f.setSize(531, 551);
+                f.setLocation(200, 100);
                 f.setVisible(true);
 
             } catch (IOException e) {
-// TODO                
-//JOptionPane.showMessageDialog(this, "Error opening etc.", "No entry selected", JOptionPane.ERROR_MESSAGE);
+                // TODO
+                JOptionPane.showMessageDialog(this, "Error opening file " + file_name, "I/O error", JOptionPane.ERROR_MESSAGE);
                 continue;
             }
-        //JOptionPane.showMessageDialog(this, file_name, file_name, JOptionPane.INFORMATION_MESSAGE);
         }
     }//GEN-LAST:event_showImageButtonMouseClicked
 
-    private void startCalculationButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_startCalculationButtonMouseClicked
-        ALGORITHM.Function.updateTotalSteps();
-        prepareCalculation();
-            try {
-                ALGORITHM.Neighborhood.initializeMinimalNeighborhoodSizeValue();//initializeMinimalNeighborhoodValue();
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(null, e, "INTERNAL ERROR when initializing minimal neighborhood", JOptionPane.ERROR_MESSAGE);
-                clearUpAfterCalculation();
-                return;
-            }
-            try {
-                if (!(new File("graphs")).exists()) {
-                    if (!(new File("graphs")).mkdir()) {
-                        throw new Exception("Could not create directory 'graphs'");
-                    }
-                }
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(null, e, "INTERNAL ERROR when creating directory", JOptionPane.ERROR_MESSAGE);
-                clearUpAfterCalculation();
-                return;
-            }
-
-            ALGORITHM.Function.progress = ALGORITHM.Function.getTotalCalculationSteps();
-            ALGORITHM.Function.lastUpdate = ALGORITHM.Function.progress;
-            ALGORITHM.Function.lastUpdateTime = java.lang.System.currentTimeMillis();
-            ALGORITHM.Function.SPEED_FACTOR = BigInteger.valueOf(500000);
-
-
-            ALGORITHM.Function.testIfSingleCalculation();
-            try {
-                ALGORITHM.Function.initCurrentSignificantFunction();
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(null, e, "INTERNAL ERROR initializing Function", JOptionPane.ERROR_MESSAGE);
-                clearUpAfterCalculation();
-                return;
-            }        
-
-            
-// start seperate calculation thread
-        if ((calculation_thread != null) && (calculation_thread.isAlive())) {
-            calculation_thread.interrupt();
-        }
-        while ((calculation_thread != null) && (calculation_thread.isAlive())) {
-        }
-        calculation_thread = new CalculationThread();
-        calculation_thread.init_thread(this, progressBar, neededTimeField, generateGraphCheckBox.isSelected(), useFastCPPPluginCheckBox.isSelected(), outputAllRadioButton.isSelected(), outputSurjectiveRadioButton.isSelected(), outputOnlyInjectiveRadioButton.isSelected(), addToDatabaseCheckBox.isSelected(), checkDatabaseDuplicatesCheckBox.isSelected());
-
-        calculation_thread.start();
-    }//GEN-LAST:event_startCalculationButtonMouseClicked
-
-    private void prepareCalculation() {
-        stopCalculationButton.setEnabled(true);
-        startCalculationButton.setEnabled(false);
-
-        neighborhoodSizeWasActivated = neighborhoodSizeField.isEnabled();
-        significantNeighborhoodSizeWasActivated = significantNeighborhoodSizeField.isEnabled();
-        neighborhoodWasActivated = neighborhoodField.isEnabled();
-        ruleNumberWasActivated = ruleField.isEnabled();
-        neighborhoodSizeField.setEnabled(false);
-        significantNeighborhoodSizeField.setEnabled(false);
-        neighborhoodField.setEnabled(false);
-        ruleField.setEnabled(false);
-        booleanRuleField.setEnabled(false);
-        numberOfCellStatesField.setEnabled(false);
-        testSingleNeighborhoodRadioButton.setEnabled(false);
-        testAllNeighborhoodVariationsRadioButton.setEnabled(false);
-        testAllNeighborhoodSizesRadioButton.setEnabled(false);
-        testAllNeighborhoodsRadioButton.setEnabled(false);
-        singleRuleTestRadioButton.setEnabled(false);
-        allRuleTestRadioButton.setEnabled(false);
-        allNeighborhoodRuleTestRadioButton.setEnabled(false);
-        outputAllRadioButton.setEnabled(false);
-        outputSurjectiveRadioButton.setEnabled(false);
-        outputOnlyInjectiveRadioButton.setEnabled(false);
-        generateGraphCheckBox.setEnabled(false);
-        addToDatabaseCheckBox.setEnabled(false);
-        checkDatabaseDuplicatesCheckBox.setEnabled(false);
-        useFastCPPPluginCheckBox.setEnabled(false);
-        endProgramButton.setEnabled(false);
-        saveEndProgramButton.setEnabled(false);
-        polynomialRuleCheckBox.setEnabled(false);
-
-        neededTimeLabel.setText("Remaining calculation time");
-        // ... calculation, progress bar, extra thread?
-
-        // TODO: pruefen ob 'generate graph' aktiviert wurde und auf Problemgroesse testen -> groesser als 5 kaum sinnvoll (VIZ kann es nicht) => User fragen.
-
-
-        progressBar.setMaximum(1000);
-        progressBar.setValue(0);
-        
-    }
-    
-    public void clearUpAfterCalculation() {
-            results.fireTableStructureChanged(); // todo?
-
-            stopCalculationButton.setEnabled(false);
-            startCalculationButton.setEnabled(true);
-            neighborhoodSizeField.setEnabled(neighborhoodSizeWasActivated);
-            significantNeighborhoodSizeField.setEnabled(significantNeighborhoodSizeWasActivated);
-            neighborhoodField.setEnabled(neighborhoodWasActivated);
-            ruleField.setEnabled(ruleNumberWasActivated);
-            if (ALGORITHM.Function.getNumberOfCellStates() != 2) {
-                booleanRuleField.setEnabled(false);
-                booleanRuleField.setText("only for binary case");
-            } else if (!booleanRuleField.isEnabled()) {
-                booleanRuleField.setEnabled(ruleNumberWasActivated);
-            }
-            numberOfCellStatesField.setEnabled(true);
-            testSingleNeighborhoodRadioButton.setEnabled(true);
-            testAllNeighborhoodVariationsRadioButton.setEnabled(true);
-            testAllNeighborhoodSizesRadioButton.setEnabled(true);
-            if (!allNeighborhoodRuleTestRadioButton.isSelected()) {
-                testAllNeighborhoodsRadioButton.setEnabled(true);
-            }
-            singleRuleTestRadioButton.setEnabled(true);
-            allRuleTestRadioButton.setEnabled(true);
-            if (!testAllNeighborhoodsRadioButton.isSelected()) {
-                allNeighborhoodRuleTestRadioButton.setEnabled(true);
-            }
-            outputAllRadioButton.setEnabled(true);
-            outputSurjectiveRadioButton.setEnabled(true);
-            outputOnlyInjectiveRadioButton.setEnabled(true);
-            if (!useFastCPPPluginCheckBox.isSelected()) {
-                generateGraphCheckBox.setEnabled(true);
-            }
-            addToDatabaseCheckBox.setEnabled(true);
-            checkDatabaseDuplicatesCheckBox.setEnabled(true);
-            useFastCPPPluginCheckBox.setEnabled(true);
-// TODO            polynomialRuleCheckBox.setEnabled(true);
-
-            endProgramButton.setEnabled(true);
-            saveEndProgramButton.setEnabled(true);
-
-            neededTimeLabel.setText("Needed calculation time");
-            updateNeededFields();
-            
-            progressBar.setValue(1000);        
-    }
-    
-    private void loadResultsIntoDatabase(BufferedReader p) throws NumberFormatException, IOException {
-        results.datas.clear();
-        String t;
-        while ((t = p.readLine()) != null) {
-            Object[] object_row = ALGORITHM.Function.parseParametersAsString(t);
-            object_row[7] = new Boolean((new File(ALGORITHM.Function.getImageFileName(object_row) + ".viz")).exists());
-            object_row[8] = new Boolean((new File(ALGORITHM.Function.getImageFileName(object_row) + ".viz.png")).exists());
-            results.datas.add(object_row);
-            results.fireTableDataChanged();
-        }
-    }
-
+    /**
+     * load results into the database from a file
+     * @param evt unused
+     */
     private void loadResultsButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_loadResultsButtonMouseClicked
         if (fileChooser.showOpenDialog(this) == fileChooser.APPROVE_OPTION) {
             File my_file = fileChooser.getSelectedFile();
@@ -1640,14 +2006,10 @@ public class Main extends java.awt.Frame {
         }
     }//GEN-LAST:event_loadResultsButtonMouseClicked
 
-    private void eraseMarkedEntriesButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_eraseMarkedEntriesButtonMouseClicked
-        int[] list = resultTable.getSelectedRows();
-        for (int i = 0; i < list.length; i++) {
-            results.datas.remove(list[i] - i);
-        }
-        results.fireTableDataChanged();
-    }//GEN-LAST:event_eraseMarkedEntriesButtonMouseClicked
-
+    /**
+     * save results from the database into a file
+     * @param evt unused
+     */
     private void saveResultsButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_saveResultsButtonMouseClicked
         if (fileChooser.showSaveDialog(this) == fileChooser.APPROVE_OPTION) {
             File my_file = fileChooser.getSelectedFile();
@@ -1667,11 +2029,13 @@ public class Main extends java.awt.Frame {
                     p.println(
                             "" + (java.math.BigInteger) t[0] + ", " +
                             "\"" + (String) t[1] + "\", " +
-                            "" + (java.lang.Integer) t[2] + ", " +
-                            "" + (java.lang.Integer) t[3] + ", " +
+                            "\"" + (String) t[2] + "\", " +
+                            "\"" + (String) t[3] + "\", " +
                             "" + (java.lang.Integer) t[4] + ", " +
-                            "" + (java.lang.Boolean) t[5] + ", " +
-                            "" + (java.lang.Boolean) t[6]);
+                            "" + (java.lang.Integer) t[5] + ", " +
+                            "" + (java.lang.Integer) t[6] + ", " +
+                            "" + (java.lang.Boolean) t[7] + ", " +
+                            "" + (java.lang.Boolean) t[8]);
                 }
                 p.close();
             } catch (Exception e) {
@@ -1680,87 +2044,119 @@ public class Main extends java.awt.Frame {
         }
     }//GEN-LAST:event_saveResultsButtonMouseClicked
 
-    private void stopCalculationButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_stopCalculationButtonMouseClicked
-        calculation_thread.interrupt();        
-    }//GEN-LAST:event_stopCalculationButtonMouseClicked
-
-    // TODO: bei mehreren Zellzustaenden entweder auf 'test all rules' stellen, oder verlangen, dass der Benutzer mehrere Eintraege bei rule_nr
-    /** Exit the Application */
-    private void exitForm(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_exitForm
-        System.exit(0);
-    }//GEN-LAST:event_exitForm
-
-    private void ruleFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ruleFieldActionPerformed
-        checkRuleField();
-
-        updateRuleFields();
-    }//GEN-LAST:event_ruleFieldActionPerformed
-
-    private void booleanRuleFieldChanged() {
-        if(ALGORITHM.Function.getNumberOfCellStates() != 2) {
-            return;
+    /**
+     * erase all selected entries of the result database
+     * @param evt unused
+     */
+    private void eraseMarkedEntriesButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_eraseMarkedEntriesButtonMouseClicked
+        int[] list = resultTable.getSelectedRows();
+        for (int i = 0; i < list.length; i++) {
+            list[i] = sorter.modelIndex(list[i]);
         }
-        
-        checkBooleanRuleField();
-        
-        //System.out.println(ALGORITHM.Function.getSignificantFunctionString());
 
-        updateRuleFields();        
-    }
-    
-    private void booleanRuleFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_booleanRuleFieldFocusLost
-        booleanRuleFieldChanged();
-    }//GEN-LAST:event_booleanRuleFieldFocusLost
+        for (int i = 0; i < list.length; i++) {
+            results.datas.remove(list[i] - i);
+        }
+        results.fireTableDataChanged();
+    }//GEN-LAST:event_eraseMarkedEntriesButtonMouseClicked
 
-    private void numberOfCellStatesFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_numberOfCellStatesFieldActionPerformed
-        checkCellStatesField();
+    /**
+     * Number of calculation steps was changed, update the output
+     * @param evt unused
+     */
+    private void calculationStepsTextFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_calculationStepsTextFieldActionPerformed
+        update_simulator_output();
+    }//GEN-LAST:event_calculationStepsTextFieldActionPerformed
 
-        updateRuleFields();
-    }//GEN-LAST:event_numberOfCellStatesFieldActionPerformed
+    /**
+     * Zoom factor of the output was changed, update the output
+     * @param evt unused
+     */
+    private void zoomSliderCaretPositionChanged(java.awt.event.InputMethodEvent evt) {//GEN-FIRST:event_zoomSliderCaretPositionChanged
+        update_simulator_output();
+    }//GEN-LAST:event_zoomSliderCaretPositionChanged
 
-    private void singleRuleTestRadioButtonItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_singleRuleTestRadioButtonItemStateChanged
-            if(testAllNeighborhoodsRadioButton.isSelected()) {
-                testAllNeighborhoodSizesRadioButton.doClick();
+    /**
+     * Generate a new random start configuration for the simulator
+     * @param evt unused
+     */
+    private void generateNewSimulatorConfigurationButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_generateNewSimulatorConfigurationButtonMouseClicked
+        generateNewSimulatorConfiguration();
+    }//GEN-LAST:event_generateNewSimulatorConfigurationButtonMouseClicked
+
+    /**
+     * Size of start configuration was changed, generate a new random start configuration for the simulator
+     * @param evt unused
+     */
+    private void simulatorConfigurationSizeTextFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_simulatorConfigurationSizeTextFieldFocusLost
+        // TODO Prüfung
+        generateNewSimulatorConfiguration();
+    }//GEN-LAST:event_simulatorConfigurationSizeTextFieldFocusLost
+
+    /**
+     * Size of start configuration was changed, generate a new random start configuration for the simulator
+     * @param evt unused
+     */
+    private void simulatorConfigurationSizeTextFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_simulatorConfigurationSizeTextFieldActionPerformed
+        generateNewSimulatorConfiguration();
+    }//GEN-LAST:event_simulatorConfigurationSizeTextFieldActionPerformed
+
+    /**
+     * Deactivate CPP Plugin if simulator generator is activated (TODO)
+     * @param evt unused
+     */
+    private void simulatorOutputCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_simulatorOutputCheckBoxItemStateChanged
+        if (simulatorOutputCheckBox.isSelected()) {
+            useFastCPPPluginCheckBox.setSelected(false);
+            useFastCPPPluginCheckBox.setEnabled(false);
+        } else {
+            if (!generateGraphCheckBox.isSelected()) {
+                useFastCPPPluginCheckBox.setEnabled(true);
             }
-            testAllNeighborhoodsRadioButton.setEnabled(false);
-    }//GEN-LAST:event_singleRuleTestRadioButtonItemStateChanged
-
-    private void polynomialRuleFieldChanged() {
-        if(!polynomialRuleCheckBox.isSelected()) {
-            return;
         }
-        checkPolynomialRuleField();
+}//GEN-LAST:event_simulatorOutputCheckBoxItemStateChanged
 
-        updateRuleFields();        
-    }
-    
-    private void polynomialRuleFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_polynomialRuleFieldFocusLost
-        polynomialRuleFieldChanged();
-    }//GEN-LAST:event_polynomialRuleFieldFocusLost
+    /**
+     * Deactivate graph and simulator output when CPP plugin is selected
+     * @param evt unused
+     */
+    private void useFastCPPPluginCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_useFastCPPPluginCheckBoxItemStateChanged
+        if (useFastCPPPluginCheckBox.isSelected()) {
+            generateGraphCheckBox.setSelected(false);
+            generateGraphCheckBox.setEnabled(false);
+            simulatorOutputCheckBox.setSelected(false);
+            simulatorOutputCheckBox.setEnabled(false);
+        } else {
+            generateGraphCheckBox.setEnabled(true);
+            simulatorOutputCheckBox.setEnabled(true);
+        }
+    }//GEN-LAST:event_useFastCPPPluginCheckBoxItemStateChanged
 
-private void polynomialRuleCheckBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_polynomialRuleCheckBoxActionPerformed
-    if(polynomialRuleCheckBox.isSelected()) {
-        polynomialRuleField.setEnabled(true);
-        updateRuleFields();
-    } else {
-        polynomialRuleField.setEnabled(false);
-        polynomialRuleField.setText("deactivated");
-    }
-}//GEN-LAST:event_polynomialRuleCheckBoxActionPerformed
+    /**
+     * Exit program
+     * @param evt unused
+     */
+    private void endProgramButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_endProgramButtonMouseClicked
+        exitProgram();
+    }//GEN-LAST:event_endProgramButtonMouseClicked
 
-private void endProgramButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_endProgramButtonMouseClicked
-        setVisible(false);
-        dispose();
-        System.exit(0);
-}//GEN-LAST:event_endProgramButtonMouseClicked
-
-private void saveEndProgramButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_saveEndProgramButtonMouseClicked
-
+    /** 
+     * Save GUI control settings and exit the program
+     * @param evt unused
+     */
+    private void saveEndProgramButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_saveEndProgramButtonMouseClicked
         // save database, save rule, neigbhorhood etc.
         // reload in main!
+        saveSettings("temp_results");
+        exitProgram();
+    }//GEN-LAST:event_saveEndProgramButtonMouseClicked
 
-
-        File my_file = new File("temp_results.txt");
+    /**
+     * Save GUI control settings into a file
+     * @param file_name file name
+     */
+    private void saveSettings(String file_name) {
+        File my_file = new File(file_name);
         try {
             my_file.createNewFile();
         } catch (IOException e) {
@@ -1773,69 +2169,585 @@ private void saveEndProgramButtonMouseClicked(java.awt.event.MouseEvent evt) {//
             f = new FileOutputStream(my_file.getAbsoluteFile());
             p = new PrintStream(f);
 
-            p.println(testSingleNeighborhoodRadioButton.isSelected());
-            p.println(testAllNeighborhoodVariationsRadioButton.isSelected());
-            p.println(testAllNeighborhoodSizesRadioButton.isSelected());
-            p.println(testAllNeighborhoodsRadioButton.isSelected());
+
+            p.println(testAllNeighborhoodVariationsCheckBox.isSelected());
+            p.println(testAllNeighborhoodPermutationsCheckBox.isSelected());
+            p.println(testAllBalancedRulesCheckBox.isSelected());
 
             p.println(neighborhoodField.getText());
-            p.println(significantNeighborhoodSizeField.getText());
-            p.println(neighborhoodSizeField.getText());
+
+            p.println(minSignificantNeighborhoodSizeTextField.getText());
+            p.println(maxSignificantNeighborhoodSizeTextField.getText());
+            p.println(minNeighborhoodSizeTextField.getText());
+            p.println(maxNeighborhoodSizeTextField.getText());
 
             p.println(numberOfCellStatesField.getText());
             p.println(ruleField.getText());
-            p.println(booleanRuleField.getText());
 
             p.println(outputAllRadioButton.isSelected());
             p.println(outputSurjectiveRadioButton.isSelected());
             p.println(outputOnlyInjectiveRadioButton.isSelected());
 
-            p.println(generateGraphCheckBox.isSelected());
             p.println(addToDatabaseCheckBox.isSelected());
+            p.println(simulatorOutputCheckBox.isSelected());
+            p.println(generateGraphCheckBox.isSelected());
+
             p.println(checkDatabaseDuplicatesCheckBox.isSelected());
             p.println(useFastCPPPluginCheckBox.isSelected());
             p.println(polynomialRuleCheckBox.isSelected());
 
+            p.println(calculationStepsTextField.getText());
+            p.println(simulatorConfigurationSizeTextField.getText());
+            p.println(startConfigurationTextField.getText());
+
+
+// database
             for (int i = 0; i < results.datas.size(); i++) {
                 Object[] t = (Object[]) results.datas.get(i);
                 p.println(
                         "" + (java.math.BigInteger) t[0] + ", " +
                         "\"" + (String) t[1] + "\", " +
-                        "" + (java.lang.Integer) t[2] + ", " +
-                        "" + (java.lang.Integer) t[3] + ", " +
+                        "\"" + (String) t[2] + "\", " +
+                        "\"" + (String) t[3] + "\", " +
                         "" + (java.lang.Integer) t[4] + ", " +
-                        "" + (java.lang.Boolean) t[5] + ", " +
-                        "" + (java.lang.Boolean) t[6]);
+                        "" + (java.lang.Integer) t[5] + ", " +
+                        "" + (java.lang.Integer) t[6] + ", " +
+                        "" + (java.lang.Boolean) t[7] + ", " +
+                        "" + (java.lang.Boolean) t[8]);
             }
             p.close();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error writing to file " + my_file.getAbsoluteFile() + " : " + e, "Error writing file", JOptionPane.ERROR_MESSAGE);
         }
 
-        setVisible(false);
-        dispose();
-        System.exit(0);
-}//GEN-LAST:event_saveEndProgramButtonMouseClicked
+    }
 
-private void neighborhoodSizeFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_neighborhoodSizeFieldActionPerformed
-    neighborhoodSizeFieldChanged();
-}//GEN-LAST:event_neighborhoodSizeFieldActionPerformed
+    /**
+     * Activate and update the polynomial rule field if the corresponding check box was activated
+     * @param evt unused
+     */
+    private void polynomialRuleCheckBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_polynomialRuleCheckBoxActionPerformed
+        if (polynomialRuleCheckBox.isSelected()) {
+            polynomialRuleField.setEnabled(true);
+            updateRuleFields();
+        } else {
+            polynomialRuleField.setEnabled(false);
+            polynomialRuleField.setText("deactivated");
+        }
+    }//GEN-LAST:event_polynomialRuleCheckBoxActionPerformed
 
-private void neighborhoodFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_neighborhoodFieldActionPerformed
-    neighborhoodFieldChanged();
-}//GEN-LAST:event_neighborhoodFieldActionPerformed
+    /**
+     * Polynomial rule field was changed, call update procedure
+     * @param evt unused
+     */
+    private void polynomialRuleFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_polynomialRuleFieldFocusLost
+        polynomialRuleFieldChanged();
+    }//GEN-LAST:event_polynomialRuleFieldFocusLost
 
-private void significantNeighborhoodSizeFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_significantNeighborhoodSizeFieldActionPerformed
-    significantNeighborhoodSizeFieldChanged();
-}//GEN-LAST:event_significantNeighborhoodSizeFieldActionPerformed
+    /**
+     * Polynomial rule field was changed, call update procedure
+     * @param evt unused
+     */
+    private void polynomialRuleFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_polynomialRuleFieldActionPerformed
+        polynomialRuleFieldChanged();
+    }//GEN-LAST:event_polynomialRuleFieldActionPerformed
 
-private void booleanRuleFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_booleanRuleFieldActionPerformed
-    booleanRuleFieldChanged();
-}//GEN-LAST:event_booleanRuleFieldActionPerformed
+    /**
+     * Boolean rule field was changed, call update procedure
+     * @param evt unused
+     */
+    private void booleanRuleFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_booleanRuleFieldFocusLost
+        booleanRuleFieldChanged();
+    }//GEN-LAST:event_booleanRuleFieldFocusLost
 
-private void polynomialRuleFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_polynomialRuleFieldActionPerformed
-    polynomialRuleFieldChanged();
-}//GEN-LAST:event_polynomialRuleFieldActionPerformed
+    /**
+     * Boolean rule field was changed, call update procedure
+     * @param evt unused
+     */
+    private void booleanRuleFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_booleanRuleFieldActionPerformed
+        booleanRuleFieldChanged();
+    }//GEN-LAST:event_booleanRuleFieldActionPerformed
+
+    /**
+     * Wolfram rule field was changed, call update procedure
+     * @param evt unused
+     */
+    private void ruleFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_ruleFieldFocusLost
+        // TODO: nicht erlauben falls mehrere cell states oder mehrere significante neighborhoods eingestellt sind
+        checkRuleField();
+
+        updateRuleFields();
+    }//GEN-LAST:event_ruleFieldFocusLost
+
+    /**
+     * Wolfram rule field was changed, call update procedure
+     * @param evt unused
+     */
+    private void ruleFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ruleFieldActionPerformed
+        checkRuleField();
+
+        updateRuleFields();
+    }//GEN-LAST:event_ruleFieldActionPerformed
+
+    /**
+     * Prepare new calculation, initialize iterations and automatic tests, start a new calculation thread
+     * @param evt unused
+     */
+    private void startCalculationButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_startCalculationButtonMouseClicked
+        prepareCalculation();
+        ALGORITHM.Iteration.initialize();
+
+        // start seperate calculation thread
+        if ((calculation_thread != null) && (calculation_thread.isAlive())) {
+            calculation_thread.interrupt();
+        }
+        while ((calculation_thread != null) && (calculation_thread.isAlive())) {
+        }
+        calculation_thread = new CalculationThread();
+        calculation_thread.init_thread(this, progressBar, neededTimeField, generateGraphCheckBox.isSelected(), useFastCPPPluginCheckBox.isSelected(), outputAllRadioButton.isSelected(), outputSurjectiveRadioButton.isSelected(), outputOnlyInjectiveRadioButton.isSelected(), addToDatabaseCheckBox.isSelected(), checkDatabaseDuplicatesCheckBox.isSelected(), outputBooleanRepresentationCheckBox.isSelected(), outputPolynomialRepresentationCheckBox.isSelected());
+
+        calculation_thread.start();
+    }//GEN-LAST:event_startCalculationButtonMouseClicked
+
+    /**
+     * Interrupt the ongoing calculation
+     * @param evt unused
+     */
+    private void stopCalculationButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_stopCalculationButtonMouseClicked
+        calculation_thread.interrupt();
+    }//GEN-LAST:event_stopCalculationButtonMouseClicked
+
+    /**
+     * Number of cell states have been changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void numberOfCellStatesFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_numberOfCellStatesFieldFocusLost
+        checkCellStatesField();
+
+        updateRuleFields();
+    }//GEN-LAST:event_numberOfCellStatesFieldFocusLost
+
+    /**
+     * Number of cell states have been changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void numberOfCellStatesFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_numberOfCellStatesFieldActionPerformed
+        checkCellStatesField();
+
+        updateRuleFields();
+    }//GEN-LAST:event_numberOfCellStatesFieldActionPerformed
+
+    /**
+     * Neighborhood field was changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void neighborhoodFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_neighborhoodFieldFocusLost
+        neighborhoodFieldChanged();
+    }//GEN-LAST:event_neighborhoodFieldFocusLost
+
+    /**
+     * Neighborhood field was changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void neighborhoodFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_neighborhoodFieldActionPerformed
+        neighborhoodFieldChanged();
+    }//GEN-LAST:event_neighborhoodFieldActionPerformed
+
+    /**
+     * Minimal significant neighborhood size field was changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void minSignificantNeighborhoodSizeTextFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_minSignificantNeighborhoodSizeTextFieldFocusLost
+        minSignificantNeighborhoodSizeFieldChanged();
+}//GEN-LAST:event_minSignificantNeighborhoodSizeTextFieldFocusLost
+
+    /**
+     * Minimal significant neighborhood size field was changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void minSignificantNeighborhoodSizeTextFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_minSignificantNeighborhoodSizeTextFieldActionPerformed
+        minSignificantNeighborhoodSizeFieldChanged();
+}//GEN-LAST:event_minSignificantNeighborhoodSizeTextFieldActionPerformed
+
+    /**
+     * Minimal significant neighborhood size field was changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void minNeighborhoodSizeTextFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_minNeighborhoodSizeTextFieldFocusLost
+        minNeighborhoodSizeFieldChanged();
+}//GEN-LAST:event_minNeighborhoodSizeTextFieldFocusLost
+
+    /**
+     * Minimal significant neighborhood size field was changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void minNeighborhoodSizeTextFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_minNeighborhoodSizeTextFieldActionPerformed
+        minNeighborhoodSizeFieldChanged();
+}//GEN-LAST:event_minNeighborhoodSizeTextFieldActionPerformed
+
+    /**
+     * Maximal significant neighborhood size field was changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void maxSignificantNeighborhoodSizeTextFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_maxSignificantNeighborhoodSizeTextFieldActionPerformed
+        maxSignificantNeighborhoodSizeFieldChanged();
+}//GEN-LAST:event_maxSignificantNeighborhoodSizeTextFieldActionPerformed
+
+    /**
+     * Minimal significant neighborhood size field was changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void maxSignificantNeighborhoodSizeTextFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_maxSignificantNeighborhoodSizeTextFieldFocusLost
+        maxSignificantNeighborhoodSizeFieldChanged();
+}//GEN-LAST:event_maxSignificantNeighborhoodSizeTextFieldFocusLost
+
+    /**
+     * Maximal neighborhood size field was changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void maxNeighborhoodSizeTextFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_maxNeighborhoodSizeTextFieldActionPerformed
+        maxNeighborhoodSizeFieldChanged();
+}//GEN-LAST:event_maxNeighborhoodSizeTextFieldActionPerformed
+
+    /**
+     * Maximal neighborhood size field was changed, update and check corresponding fields
+     * @param evt unused
+     */
+    private void maxNeighborhoodSizeTextFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_maxNeighborhoodSizeTextFieldFocusLost
+        maxNeighborhoodSizeFieldChanged();
+}//GEN-LAST:event_maxNeighborhoodSizeTextFieldFocusLost
+
+    /**
+     * Activating the automatic test of all balanced rules allows the test of multiple neighborhoods
+     * and deactivates the rule fields and updates the required time
+     * @param evt unused
+     */
+    private void testAllBalancedRulesCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_testAllBalancedRulesCheckBoxItemStateChanged
+        if (testAllNeighborhoodVariationsCheckBox.isSelected() || testAllNeighborhoodPermutationsCheckBox.isSelected() || testAllBalancedRulesCheckBox.isSelected()) {
+            startSimulationButton.setEnabled(false);
+        } else {
+            startSimulationButton.setEnabled(true);
+        }
+
+        if (testAllBalancedRulesCheckBox.isSelected()) {
+            minSignificantNeighborhoodSizeTextField.setEnabled(true);
+            maxSignificantNeighborhoodSizeTextField.setEnabled(true);
+            ruleField.setEnabled(false);
+            ruleField.setText("all balanced rules");
+            if (ALGORITHM.CellStates.getNumberOfCellStates() != 2) {
+                booleanRuleField.setText("only for binary case");
+            } else {
+                booleanRuleField.setText("all");
+            }
+            booleanRuleField.setEnabled(false);
+            polynomialRuleField.setText("all");
+            polynomialRuleField.setEnabled(false);
+            polynomialRuleCheckBox.setSelected(false);
+            polynomialRuleCheckBox.setEnabled(false);
+        } else {
+            minSignificantNeighborhoodSizeTextField.setEnabled(false);
+            maxSignificantNeighborhoodSizeTextField.setEnabled(false);
+            ruleField.setText(ALGORITHM.Function.getSignificantWolframRuleNumber().toString());
+            ruleField.setEnabled(true);
+            if (polynomialRuleCheckBox.isSelected()) {
+                polynomialRuleField.setEnabled(true);
+            }
+            polynomialRuleCheckBox.setEnabled(true);
+
+            if (ALGORITHM.CellStates.getNumberOfCellStates() != 2) {
+                booleanRuleField.setEnabled(false);
+                booleanRuleField.setText("only for binary case");
+            } else if (!booleanRuleField.isEnabled() && ruleField.isEnabled()) {
+                booleanRuleField.setEnabled(true);
+            }
+            updateRuleFields();
+        }
+        ALGORITHM.Iteration.setTestAllBalancedFunctions(testAllBalancedRulesCheckBox.isSelected());
+        updateNeededRessourcesFields();
+    }//GEN-LAST:event_testAllBalancedRulesCheckBoxItemStateChanged
+
+    /**
+     * Generate simulation images from selected entries of the results database
+     * @param evt unused
+     */
+    private void generateSimulationButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_generateSimulationButtonMouseClicked
+        int[] list = resultTable.getSelectedRows();
+        for (int i = 0; i < list.length; i++) {
+            list[i] = sorter.modelIndex(list[i]);
+        }
+
+        Vector<Integer> graph_list = new Vector<Integer>();
+
+        for (int i = 0; i < list.length; i++) {
+            //   if (!results.hasSimulation(list[i])) {
+            graph_list.add(new Integer(list[i]));
+        //    } allow overwriting old
+        }
+
+        if (graph_list.size() == 0) {
+            JOptionPane.showMessageDialog(this, "Selected entries already have a simulation image.", "Entries already have Simulation", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (graph_list.size() >= 16) {
+            if (JOptionPane.showConfirmDialog(this, "" + graph_list.size() + " entries were selected for simulation image creation.\nContinue?",
+                    "Confirm generating multiple simulations",
+                    JOptionPane.YES_NO_OPTION) == 1) {
+                return;
+            }
+        }
+
+        String file_name = "";
+        try {
+            for (int i = 0; i < graph_list.size(); i++) {
+                Object[] row = results.getRow(graph_list.get(i));
+                file_name = ALGORITHM.InOutput.getSimulationFileName(row);
+
+                int cell_states = (Integer) row[6];
+                int neighborhood_size = (Integer) row[4];
+                int significant_neighborhood_size = (Integer) row[5];
+                int[] function = ALGORITHM.Function.calculateFunction((BigInteger) row[0], ALGORITHM.Function.calculateMaxArraySize(cell_states, significant_neighborhood_size), ALGORITHM.Function.calculateMaxArraySize(cell_states, neighborhood_size), cell_states);
+                int[] neighborhood = ALGORITHM.Neighborhood.parseSignificantNeighborhoodString((String) row[3]);
+                BufferedImage image = generateSimulatorBufferedImage(cell_states, function, neighborhood);
+                ImageIO.write(image, "png", new File(file_name));
+            }
+        } catch (Exception exc) {
+            JOptionPane.showMessageDialog(this, "Error (" + exc + ") when creating image (" + file_name + ") in current directory (" + System.getProperty("user.dir") + ").", "Error generating simulation image", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        for (int i = 0; i < graph_list.size(); i++) {
+            file_name = ALGORITHM.InOutput.getSimulationFileName(results.getRow(graph_list.get(i)));
+            if ((new File(file_name)).exists()) {
+                results.setHasSimulation(graph_list.get(i));
+            }
+            results.fireTableRowsUpdated(graph_list.get(i), graph_list.get(i));
+        }
+        if (graph_list.size() == 1) {
+// TODO select single row
+        }
+}//GEN-LAST:event_generateSimulationButtonMouseClicked
+
+    /**
+     * Displays the corresponding images in new frames of the selected entries of the result database
+     * @param evt unused
+     */
+    private void showSimulationButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_showSimulationButtonMouseClicked
+        int[] list = resultTable.getSelectedRows();
+        for (int i = 0; i < list.length; i++) {
+            list[i] = sorter.modelIndex(list[i]);
+        }
+
+        Vector<Integer> graph_list = new Vector<Integer>();
+        for (int i = 0; i < list.length; i++) {
+            if (results.hasSimulation(list[i])) {
+                graph_list.add(new Integer(list[i]));
+            }
+        }
+
+        if (graph_list.size() == 0) {
+            JOptionPane.showMessageDialog(this, "No entries with simulations selected", "No entry selected", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (graph_list.size() >= 16) {
+            if (JOptionPane.showConfirmDialog(this, "This will open " + graph_list.size() + " new windows.\nContinue?",
+                    "Confirm opening of multiple windows",
+                    JOptionPane.YES_NO_OPTION) == 1) {
+                return;
+            }
+        }
+        for (int i = 0; i < graph_list.size(); i++) {
+            String file_name = ALGORITHM.InOutput.getSimulationFileName(results.getRow(graph_list.get(i)));
+            try {
+                BufferedImage image = ImageIO.read(new File(file_name));
+                ImageRenderComponent irc = new ImageRenderComponent(image);
+                irc.setOpaque(true);  // for use as a content pane
+
+                JFrame f = new JFrame("Simulator output '" + file_name + "'");
+
+                f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                f.add("Center", new JScrollPane(irc));
+                f.setSize(531, 551);
+                f.setLocation(200, 100);
+                f.setVisible(true);
+
+            } catch (IOException e) {
+
+                JOptionPane.showMessageDialog(this, "Error opening file " + file_name, "I/O error", JOptionPane.ERROR_MESSAGE);
+                continue;
+            }
+        }    
+}//GEN-LAST:event_showSimulationButtonMouseClicked
+
+    /**
+     * deactivates the CPP plugin if graphs should be generated
+     * @param evt unused
+     */
+    private void generateGraphCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_generateGraphCheckBoxItemStateChanged
+        if (generateGraphCheckBox.isSelected()) {
+            useFastCPPPluginCheckBox.setSelected(false);
+            useFastCPPPluginCheckBox.setEnabled(false);
+        } else {
+            if (!simulatorOutputCheckBox.isSelected()) {
+                useFastCPPPluginCheckBox.setEnabled(true);
+            }
+        }
+    }//GEN-LAST:event_generateGraphCheckBoxItemStateChanged
+
+    /**
+     * Disable the simulation button if multiple neighborhood variations should be tested
+     * @param evt unused
+     */
+    private void testAllNeighborhoodVariationsCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_testAllNeighborhoodVariationsCheckBoxItemStateChanged
+        ALGORITHM.Iteration.setTestAllNeighborhoodVariations(testAllNeighborhoodVariationsCheckBox.isSelected());
+        if (testAllNeighborhoodVariationsCheckBox.isSelected() || testAllNeighborhoodPermutationsCheckBox.isSelected() || testAllBalancedRulesCheckBox.isSelected()) {
+            startSimulationButton.setEnabled(false);
+        } else {
+            startSimulationButton.setEnabled(true);
+        }
+        updateNeededRessourcesFields();
+    }//GEN-LAST:event_testAllNeighborhoodVariationsCheckBoxItemStateChanged
+
+    /**
+     * Disable the simulation button if multiple neighborhood permutation should be tested
+     * @param evt unused
+     */
+    private void testAllNeighborhoodPermutationsCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_testAllNeighborhoodPermutationsCheckBoxItemStateChanged
+        ALGORITHM.Iteration.setTestAllNeighborhoodPermutations(testAllNeighborhoodPermutationsCheckBox.isSelected());
+        if (testAllNeighborhoodVariationsCheckBox.isSelected() || testAllNeighborhoodPermutationsCheckBox.isSelected() || testAllBalancedRulesCheckBox.isSelected()) {
+            startSimulationButton.setEnabled(false);
+        } else {
+            startSimulationButton.setEnabled(true);
+        }
+        updateNeededRessourcesFields();
+    }//GEN-LAST:event_testAllNeighborhoodPermutationsCheckBoxItemStateChanged
+
+    /**
+     * Update the simulator output
+     * @param evt unused
+     */
+    private void startSimulationButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_startSimulationButtonMouseClicked
+        update_simulator_output();
+    }//GEN-LAST:event_startSimulationButtonMouseClicked
+
+    /**
+     * The calculation steps have changed, update the simulator output
+     * @param evt unused
+     */
+    private void calculationStepsTextFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_calculationStepsTextFieldFocusLost
+        update_simulator_output();
+    }//GEN-LAST:event_calculationStepsTextFieldFocusLost
+
+    /**
+     * Save current simulator start configuration to a file
+     * @param evt unused
+     */
+    private void saveSimulatorConfigurationButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_saveSimulatorConfigurationButtonMouseClicked
+        if (fileChooser.showSaveDialog(this) == fileChooser.APPROVE_OPTION) {
+            File my_file = fileChooser.getSelectedFile();
+            try {
+                my_file.createNewFile();
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, "Error opening file " + my_file.getAbsoluteFile(), "Error opening file", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            FileOutputStream f;
+            PrintStream p;
+            try {
+                f = new FileOutputStream(my_file.getAbsoluteFile());
+                p = new PrintStream(f);
+                p.println(simulatorConfigurationSizeTextField.getText());
+                p.println(startConfigurationTextField.getText());
+                p.close();
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Error writing to file " + my_file.getAbsoluteFile() + " : " + e, "Error writing file", JOptionPane.ERROR_MESSAGE);
+            }
+        }        
+    }//GEN-LAST:event_saveSimulatorConfigurationButtonMouseClicked
+
+    /**
+     * Load simulator start configuration from a file into the start configuration field
+     * @param evt unused
+     */
+    private void loadSimulatorConfigurationButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_loadSimulatorConfigurationButtonMouseClicked
+        if (fileChooser.showOpenDialog(this) == fileChooser.APPROVE_OPTION) {
+            File my_file = fileChooser.getSelectedFile();
+            if (!my_file.exists()) {
+                JOptionPane.showMessageDialog(this, "Error opening file " + my_file.getAbsoluteFile(), "File not found", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            try {
+                BufferedReader p = new BufferedReader(new FileReader(my_file.getAbsoluteFile()));
+                simulatorConfigurationSizeTextField.setText(p.readLine());
+                startConfigurationTextField.setText(p.readLine());
+                p.close();
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, "Error reading from file " + my_file.getAbsoluteFile(), "Error reading file", JOptionPane.ERROR_MESSAGE);
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(this, "Error reading from file " + my_file.getAbsoluteFile(), "Error reading file", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }//GEN-LAST:event_loadSimulatorConfigurationButtonMouseClicked
+
+    /**
+     * The boolean rule field has changed, parse and check its contents and update the corresponding rule fields 
+     */
+    private void booleanRuleFieldChanged() {
+        if (ALGORITHM.CellStates.getNumberOfCellStates() != 2) {
+            return;
+        }
+        checkBooleanRuleField();
+        updateRuleFields();
+    }
+
+    /**
+     * The polynomial rule field has changed, parse and check its contents and update the corresponding rule fields
+     */
+    private void polynomialRuleFieldChanged() {
+        if (!polynomialRuleCheckBox.isSelected()) {
+            return;
+        }
+        checkPolynomialRuleField();
+        updateRuleFields();
+    }
+
+    /**
+     * Generate new simulator image and update the simulator frame with the new image
+     */
+    private void update_simulator_output() {
+        if (testAllNeighborhoodVariationsCheckBox.isSelected() || testAllNeighborhoodPermutationsCheckBox.isSelected() || testAllBalancedRulesCheckBox.isSelected()) {
+            return;
+        }
+
+        try {
+            updateCurrentSimulatorImage();
+            updateSimulatorFrame();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error generating simulator output : " + e, "Error Simulator output", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Generate a new random start configuration for the 1D Simulator and updates the output
+     */
+    private void generateNewSimulatorConfiguration() {
+        int size = Integer.parseInt(simulatorConfigurationSizeTextField.getText());
+        Random generator = new Random();
+        int cell_states = ALGORITHM.CellStates.getNumberOfCellStates();
+
+        int[] output = new int[size];
+        for (int i = 0; i < size; i++) {
+            int r = generator.nextInt(cell_states);
+            output[i] = r;
+        }
+        String start_configuration = new String("");
+        for (int i = 0; i < size; i++) {
+            start_configuration += output[i];
+            if (i < size - 1) {
+                start_configuration += ",";
+            }
+        }
+        startConfigurationTextField.setText(start_configuration);
+        update_simulator_output();
+    }
 
     /**
      * @param args the command line arguments
@@ -1850,29 +2762,37 @@ private void polynomialRuleFieldActionPerformed(java.awt.event.ActionEvent evt) 
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JCheckBox addToDatabaseCheckBox;
-    private javax.swing.JRadioButton allNeighborhoodRuleTestRadioButton;
-    private javax.swing.JRadioButton allRuleTestRadioButton;
     private javax.swing.JPanel automaticTestsPanel;
     private javax.swing.ButtonGroup automationNeighborhoodButtonGroup;
-    private javax.swing.JPanel automationPanel;
     private javax.swing.ButtonGroup automationRuleButtonGroup;
     private javax.swing.JLabel booleanRepresentationLabel;
     private javax.swing.JTextField booleanRuleField;
     private javax.swing.JPanel calculationPanel;
+    private javax.swing.JLabel calculationStepsLabel;
+    private javax.swing.JTextField calculationStepsTextField;
     private javax.swing.JTabbedPane catestPane;
     private javax.swing.JCheckBox checkDatabaseDuplicatesCheckBox;
     private javax.swing.ButtonGroup chooseOutputInjectiveSurjectiveButtonGroup;
     private javax.swing.JLabel contactLabel;
     private javax.swing.JLabel contactLabel1;
+    private javax.swing.JPanel contactPanel;
+    private javax.swing.JLabel dots1Label;
+    private javax.swing.JLabel dots2Label;
     private javax.swing.JButton endProgramButton;
     private javax.swing.JButton eraseAllEntriesButton;
     private javax.swing.JButton eraseMarkedEntriesButton;
     private javax.swing.JFileChooser fileChooser;
     private javax.swing.JCheckBox generateGraphCheckBox;
     private javax.swing.JButton generateImageButton;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JButton generateNewSimulatorConfigurationButton;
+    private javax.swing.JButton generateSimulationButton;
     private javax.swing.JButton loadResultsButton;
+    private javax.swing.JButton loadSimulatorConfigurationButton;
+    private javax.swing.JTextField maxNeighborhoodSizeTextField;
+    private javax.swing.JTextField maxSignificantNeighborhoodSizeTextField;
+    private javax.swing.JTextField minNeighborhoodSizeTextField;
+    private javax.swing.JTextField minSignificantNeighborhoodSizeTextField;
+    private javax.swing.JPanel miscOptionsPanel;
     private javax.swing.JLabel neededMemoryField;
     private javax.swing.JLabel neededMemoryLabel;
     private javax.swing.JLabel neededTimeField;
@@ -1880,13 +2800,13 @@ private void polynomialRuleFieldActionPerformed(java.awt.event.ActionEvent evt) 
     private javax.swing.JPanel neighborhoodConfigurationPanel;
     private javax.swing.JTextField neighborhoodField;
     private javax.swing.JLabel neighborhoodLabel;
-    private javax.swing.JTextField neighborhoodSizeField;
-    private javax.swing.JLabel neighborhoodSizeLabel;
     private javax.swing.JTextField numberOfCellStatesField;
     private javax.swing.JLabel numberOfCellStatesLabel;
     private javax.swing.JRadioButton outputAllRadioButton;
+    private javax.swing.JCheckBox outputBooleanRepresentationCheckBox;
     private javax.swing.JRadioButton outputOnlyInjectiveRadioButton;
     private javax.swing.JPanel outputOptionsPanel;
+    private javax.swing.JCheckBox outputPolynomialRepresentationCheckBox;
     private javax.swing.JRadioButton outputSurjectiveRadioButton;
     private javax.swing.JCheckBox polynomialRuleCheckBox;
     private javax.swing.JTextField polynomialRuleField;
@@ -1894,6 +2814,7 @@ private void polynomialRuleFieldActionPerformed(java.awt.event.ActionEvent evt) 
     private javax.swing.JLabel progressBarLabel;
     private javax.swing.JTable resultTable;
     private javax.swing.JPanel resultsPanel;
+    private javax.swing.JScrollPane resultsScrollPane;
     private javax.swing.JPanel ruleConfigurationPanel;
     private javax.swing.JTextField ruleField;
     private javax.swing.JLabel ruleNumberLabel;
@@ -1901,19 +2822,27 @@ private void polynomialRuleFieldActionPerformed(java.awt.event.ActionEvent evt) 
     private javax.swing.JLabel rulesToTestLabel;
     private javax.swing.JButton saveEndProgramButton;
     private javax.swing.JButton saveResultsButton;
+    private javax.swing.JButton saveSimulatorConfigurationButton;
     private javax.swing.JButton showImageButton;
-    private javax.swing.JTextField significantNeighborhoodSizeField;
+    private javax.swing.JButton showSimulationButton;
     private javax.swing.JLabel significantNeighborhoodSizeLabel;
-    private javax.swing.JRadioButton singleRuleTestRadioButton;
+    private javax.swing.JLabel simulatorConfigurationSizeLabel;
+    private javax.swing.JTextField simulatorConfigurationSizeTextField;
+    private javax.swing.JCheckBox simulatorOutputCheckBox;
+    private javax.swing.JPanel simulatorStartConfigurationPanel;
+    private javax.swing.JLabel slashLabel;
     private javax.swing.JButton startCalculationButton;
+    private javax.swing.JLabel startConfigurationLabel;
+    private javax.swing.JTextField startConfigurationTextField;
+    private javax.swing.JButton startSimulationButton;
     private javax.swing.JButton stopCalculationButton;
-    private javax.swing.JRadioButton testAllNeighborhoodSizesRadioButton;
-    private javax.swing.JRadioButton testAllNeighborhoodVariationsRadioButton;
-    private javax.swing.JRadioButton testAllNeighborhoodsRadioButton;
+    private javax.swing.JCheckBox testAllBalancedRulesCheckBox;
+    private javax.swing.JCheckBox testAllNeighborhoodPermutationsCheckBox;
+    private javax.swing.JCheckBox testAllNeighborhoodVariationsCheckBox;
     private javax.swing.JPanel testPanel;
-    private javax.swing.JRadioButton testSingleNeighborhoodRadioButton;
     private javax.swing.JCheckBox useFastCPPPluginCheckBox;
     private javax.swing.JLabel versionLabel;
+    private javax.swing.JLabel zoomLabel;
+    private javax.swing.JSlider zoomSlider;
     // End of variables declaration//GEN-END:variables
-//public void actionPerformed(ActionEvent event) {
 }
